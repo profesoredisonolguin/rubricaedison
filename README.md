@@ -259,18 +259,21 @@
 <body>
 <div class="container">
     <div id="main-view">
-        <div style="text-align:center; margin-bottom: 8px;">
-            <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/b/b7/Music_notation.svg"
-                alt="Notación musical"
-                style="height: 48px; width: auto; opacity: 0.7; filter: sepia(0.5) saturate(0.6) hue-rotate(5deg) brightness(0.8);"
-                onerror="this.style.display='none'"
-            />
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="width: 120px; text-align: right; font-size: 120px; line-height: 0.9; color: #c9a84c; opacity: 0.7; font-family: Georgia, serif; margin-right: -10px;">𝄞</div>
+            <div style="text-align: center;">
+                <h1 style="margin: 0;">Rúbrica de Evaluación — Educación Musical</h1>
+                <div style="margin-top: 6px; font-size: 13px; color: #b8891e; font-family: 'DM Sans', sans-serif; letter-spacing: 0.08em; font-style: italic;">Profesor Edison Olguín</div>
+            </div>
+            <div style="width: 120px; text-align: right;">
+                <button id="view-history-button">📊 Historial</button>
+            </div>
         </div>
-        <h1 style="text-align:center;">
-            Rúbrica de Evaluación — Educación Musical
-            <button id="view-history-button">📊 Historial</button>
-        </h1>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 4px;">
+            <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #c9a84c);"></div>
+            <div style="font-size: 14px; color: #c9a84c; opacity: 0.6;">✦</div>
+            <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, #c9a84c);"></div>
+        </div>
 
         <button id="student-data-toggle-button">Mostrar/Ocultar Editor de Estudiantes</button>
         <div id="student-data-editor" class="rubrica-section">
@@ -353,9 +356,14 @@
 
         <div id="rubrica-generada"></div>
 
+        <div id="student-search-container" style="display:none; margin-top: 16px;">
+            <input type="text" id="student-search-input" placeholder="🔍 Buscar estudiante..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
+        </div>
+
         <div id="analysis-buttons-container" style="text-align: center; margin-top: 20px; display: none;">
             <button id="analyze-indicators-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px; margin-right: 10px;">Ver Análisis por Indicador</button>
             <button id="analyze-summary-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px;">Ver Resumen de Calificaciones</button>
+            <button id="ranking-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #8b6914; color: white; border: none; border-radius: 5px; margin-left: 10px;">🏆 Ranking del Curso</button>
             <hr style="margin: 15px 0; border-color: #ddd;">
             <button id="export-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">⬇ Exportar datos (.json)</button>
             <label for="import-input" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; display: inline-block;">⬆ Importar datos (.json)</label>
@@ -442,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const analysisButtonsContainer = document.getElementById('analysis-buttons-container');
     const analyzeIndicatorsButton = document.getElementById('analyze-indicators-button');
     const analyzeSummaryButton = document.getElementById('analyze-summary-button');
+    const rankingButton = document.getElementById('ranking-button');
     const analysisResultsContainer = document.getElementById('analysis-results-container');
     const viewHistoryButton = document.getElementById('view-history-button');
     const backToRubricButton = document.getElementById('back-to-rubric-button');
@@ -503,7 +512,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: row.cells[1].textContent,
                 status: row.querySelector('.total-score-cell').textContent,
                 finalGrade: row.querySelector('.final-grade-cell').textContent,
-                scores: {}
+                scores: {},
+                comment: row.querySelector('.student-comment') ? row.querySelector('.student-comment').value : ''
             };
             row.querySelectorAll('td[data-indicador]').forEach((cell, index) => {
                 const indicatorName = evaluationData.indicators[index];
@@ -560,6 +570,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     studentDataToggleButton.addEventListener("click", () => { studentDataEditor.classList.toggle("visible"); });
+
+    // Fecha: registrada automáticamente en el nombre del archivo Drive
+
+    // Buscador de estudiante
+    const studentSearchInput = document.getElementById('student-search-input');
+    const studentSearchContainer = document.getElementById('student-search-container');
+    studentSearchInput.addEventListener('input', () => {
+        const query = studentSearchInput.value.toLowerCase();
+        document.querySelectorAll('.compact-rubric-table tbody tr').forEach(row => {
+            const name = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+            row.style.display = name.includes(query) ? '' : 'none';
+        });
+    });
 
     // --- Editor de Indicadores ---
     document.getElementById('indicators-toggle-button').addEventListener('click', () => {
@@ -744,14 +767,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const maxScore = row.querySelector(".score-button.selected").dataset.score;
                 cells += `<td data-indicador="${indicator}" data-max-score="${maxScore}"><div class="score-buttons"></div></td>`;
             });
-            cells += `<td class="total-score-cell"></td><td class="final-grade-cell"></td>`;
+            cells += `<td class="total-score-cell"></td><td class="final-grade-cell"></td><td class="comment-cell"><textarea class="student-comment" placeholder="Observación..." style="width:100%; min-width:120px; min-height:36px; border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif; font-size:12px; padding:4px; background:var(--surface); color:var(--text); resize:vertical;"></textarea></td>`;
             return `<tr>${cells}</tr>`;
         }).join("");
 
-        rubricaContainer.innerHTML = `<h2>Rúbrica para ${courseSelect.value}${letterSelect.value}</h2><table class="compact-rubric-table"><thead><tr>${headerHTML}</tr></thead><tbody>${bodyHTML}</tbody></table>`;
+        rubricaContainer.innerHTML = `<h2>Rúbrica para ${courseSelect.value}${letterSelect.value}</h2><table class="compact-rubric-table"><thead><tr>${headerHTML}<th>Observación</th></tr></thead><tbody>${bodyHTML}</tbody></table>`;
         addRubricScoreEventListeners();
         analysisButtonsContainer.style.display = "block";
         analysisResultsContainer.innerHTML = "";
+        studentSearchContainer.style.display = 'block';
+        studentSearchInput.value = '';
+        document.querySelectorAll('.compact-rubric-table tbody tr').forEach(r => r.style.display = '');
     });
 
     function addRubricScoreEventListeners() {
@@ -839,6 +865,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     analyzeIndicatorsButton.addEventListener("click", generateIndicatorAnalysis);
     analyzeSummaryButton.addEventListener("click", generateSummaryAnalysis);
+    rankingButton.addEventListener("click", generateRanking);
+
+    function generateRanking() {
+        const rubricTable = document.querySelector('.compact-rubric-table');
+        if (!rubricTable) return;
+
+        const rankings = [];
+        rubricTable.querySelectorAll('tbody tr').forEach(row => {
+            const name = row.cells[1].textContent;
+            const totalCell = row.querySelector('.total-score-cell');
+            const gradeCell = row.querySelector('.final-grade-cell');
+            const isAbsent = row.classList.contains('student-absent');
+            const comment = row.querySelector('.student-comment') ? row.querySelector('.student-comment').value : '';
+            if (!isAbsent && totalCell && totalCell.textContent) {
+                const total = parseFloat(totalCell.textContent) || 0;
+                const grade = gradeCell ? gradeCell.textContent : '—';
+                rankings.push({ name, total, grade, comment });
+            }
+        });
+
+        rankings.sort((a, b) => b.total - a.total);
+
+        let html = `<div class="rubrica-section">
+            <h2 style="color:var(--accent);">🏆 Ranking del Curso</h2>
+            <table class="analysis-table">
+                <thead><tr><th>#</th><th>Estudiante</th><th>Puntaje</th><th>Nota</th><th>Observación</th></tr></thead>
+                <tbody>`;
+
+        rankings.forEach((r, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+            const gradeNum = parseFloat(r.grade);
+            const gradeColor = gradeNum >= 6 ? 'var(--green)' : gradeNum >= 4 ? 'var(--amber)' : 'var(--red)';
+            html += `<tr>
+                <td style="text-align:center; font-weight:700;">${medal}</td>
+                <td>${r.name}</td>
+                <td style="text-align:center; font-weight:700;">${r.total}</td>
+                <td style="text-align:center; font-weight:700; color:${gradeColor};">${r.grade}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${r.comment || '—'}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        analysisResultsContainer.innerHTML = html;
+        analysisResultsContainer.scrollIntoView({ behavior: 'smooth' });
+    }
 
     // --- Exportar / Importar datos ---
     const COURSE_NAMES = {
@@ -1009,6 +1080,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                         calculateStudentScores(row);
+                        // Restaurar comentario
+                        const commentArea = row.querySelector('.student-comment');
+                        if (commentArea && studentData.comment) commentArea.value = studentData.comment;
                     }
                 }
             });
@@ -1663,7 +1737,24 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const folderId = await driveGetCourseFolder(driveAccessToken);
             const cursoActual = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`);
-            const fileName = `rubrica_${cursoActual}.json`;
+
+            // Buscar si ya existe un archivo para este curso (con cualquier fecha)
+            const searchRes = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
+                { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+            );
+            const searchData = await searchRes.json();
+            let fileName;
+            if (searchData.files && searchData.files.length > 0) {
+                // Ya existe — usar el mismo nombre
+                fileName = searchData.files[0].name;
+            } else {
+                // Primera vez — agregar fecha de hoy
+                const today = new Date();
+                const fecha = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
+                fileName = `rubrica_${cursoActual}_${fecha}.json`;
+            }
+
             await driveSaveFile(driveAccessToken, folderId, fileName, JSON.stringify(allEvaluations, null, 2));
             driveSetStatus(`✅ Sincronizado con Drive (${new Date().toLocaleTimeString('es-CL')})`, '#28a745');
         } catch (err) {
