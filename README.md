@@ -1,4 +1,3 @@
-
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -165,7 +164,7 @@
             <button id="back-to-rubric-button" style="padding: 8px 12px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor:pointer;">Volver a la Rúbrica</button>
         </div>
         <hr>
-        <p>Selecciona un curso y un indicador para ver el progreso a través de las evaluaciones guardadas.</p>
+        <p>Selecciona un curso, un indicador y opcionalmente un estudiante para ver el progreso.</p>
         <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 200px;">
                 <label for="history-course-select" style="font-weight: bold;">1. Selecciona un Curso:</label><br>
@@ -174,6 +173,12 @@
             <div style="flex: 1; min-width: 200px;">
                 <label for="history-indicator-select" style="font-weight: bold;">2. Selecciona un Indicador:</label><br>
                 <select id="history-indicator-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label for="history-student-select" style="font-weight: bold;">3. Selecciona un Estudiante:</label><br>
+                <select id="history-student-select" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    <option value="">Todos (promedio curso)</option>
+                </select>
             </div>
         </div>
         <div id="chart-container"></div>
@@ -202,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backToRubricButton = document.getElementById('back-to-rubric-button');
     const historyCourseSelect = document.getElementById('history-course-select');
     const historyIndicatorSelect = document.getElementById('history-indicator-select');
+    const historyStudentSelect = document.getElementById('history-student-select');
     const chartContainer = document.getElementById('chart-container');
     const savedEvaluationsContainer = document.getElementById('saved-evaluations-container');
     const savedEvaluationsList = document.getElementById('saved-evaluations-list');
@@ -662,8 +668,9 @@ document.addEventListener('DOMContentLoaded', () => {
         historyView.style.display = 'none';
         mainView.style.display = 'block';
     });
-    historyCourseSelect.addEventListener("change", renderHistoryChart);
-    historyIndicatorSelect.addEventListener("change", renderHistoryChart);
+    historyCourseSelect.addEventListener("change", () => { populateHistoryStudents(); renderHistoryChart(); });
+    historyIndicatorSelect.addEventListener("change", () => { populateHistoryStudents(); renderHistoryChart(); });
+    historyStudentSelect.addEventListener("change", renderHistoryChart);
 
     function displaySavedEvaluations() {
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
@@ -757,12 +764,46 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = indicator; option.textContent = indicator;
             historyIndicatorSelect.appendChild(option);
         });
+
+        populateHistoryStudents();
         renderHistoryChart();
+    }
+
+    function populateHistoryStudents() {
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const selectedCourse = historyCourseSelect.value;
+        const selectedIndicator = historyIndicatorSelect.value;
+        const prevStudent = historyStudentSelect.value;
+
+        historyStudentSelect.innerHTML = '<option value="">Todos (promedio curso)</option>';
+
+        if (!selectedCourse || !selectedIndicator) return;
+
+        const relevantEvals = allEvaluations.filter(e =>
+            e.course === selectedCourse && e.indicators.includes(selectedIndicator)
+        );
+        const students = [...new Set(relevantEvals.flatMap(e =>
+            e.results
+                .filter(r => r.status !== 'A' && r.scores[selectedIndicator] !== null)
+                .map(r => r.name)
+        ))].sort();
+
+        students.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name; option.textContent = name;
+            historyStudentSelect.appendChild(option);
+        });
+
+        // Mantener selección previa si sigue disponible
+        if (prevStudent && students.includes(prevStudent)) {
+            historyStudentSelect.value = prevStudent;
+        }
     }
 
     function renderHistoryChart() {
         const selectedCourse = historyCourseSelect.value;
         const selectedIndicator = historyIndicatorSelect.value;
+        const selectedStudent = historyStudentSelect ? historyStudentSelect.value : '';
         chartContainer.innerHTML = '';
         if (!selectedCourse || !selectedIndicator) {
             chartContainer.innerHTML = '<p>Por favor, selecciona un curso y un indicador para ver el gráfico.</p>';
@@ -779,27 +820,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const chartData = filteredEvals.map(evaluation => {
-            let totalScore = 0, evaluatedCount = 0;
             const maxScore = (evaluation.indicatorMaxScores && evaluation.indicatorMaxScores[selectedIndicator]) || 4;
-            evaluation.results.forEach(result => {
-                const scoreValue = result.scores[selectedIndicator];
-                if (scoreValue !== null && !isNaN(parseFloat(scoreValue))) {
-                    totalScore += parseFloat(scoreValue);
-                    evaluatedCount++;
-                }
-            });
-            const average = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
+            let value;
+
+            if (selectedStudent) {
+                // Modo estudiante individual
+                const studentResult = evaluation.results.find(r => r.name === selectedStudent);
+                const score = studentResult && studentResult.scores[selectedIndicator];
+                value = (score !== null && score !== undefined && !isNaN(parseFloat(score)))
+                    ? parseFloat(score) : null;
+            } else {
+                // Modo promedio curso
+                let totalScore = 0, evaluatedCount = 0;
+                evaluation.results.forEach(result => {
+                    const scoreValue = result.scores[selectedIndicator];
+                    if (scoreValue !== null && !isNaN(parseFloat(scoreValue))) {
+                        totalScore += parseFloat(scoreValue);
+                        evaluatedCount++;
+                    }
+                });
+                value = evaluatedCount > 0 ? totalScore / evaluatedCount : 0;
+            }
+
+            const evaluatedCount = evaluation.results.filter(r =>
+                r.status !== 'A' && r.scores[selectedIndicator] !== null && !isNaN(parseFloat(r.scores[selectedIndicator]))
+            ).length;
+
             return {
                 label: `${evaluation.title} (${new Date(evaluation.date).toLocaleDateString('es-CL')})`,
-                value: average,
+                value,
                 maxValue: maxScore,
                 evaluatedCount
             };
-        });
+        }).filter(d => d.value !== null);
 
-        chartContainer.innerHTML = `<h4>Avance de "${selectedIndicator}" para el ${selectedCourse}</h4>`;
+        if (chartData.length < 2) {
+            chartContainer.innerHTML = `<p>No hay suficientes datos para "${selectedStudent || 'este curso'}" en el indicador "${selectedIndicator}".</p>`;
+            return;
+        }
 
-        // Botón exportar imagen
+        const titulo = selectedStudent
+            ? `Avance de "${selectedIndicator}" — ${selectedStudent}`
+            : `Avance de "${selectedIndicator}" — Promedio ${selectedCourse}`;
+
+        chartContainer.innerHTML = `<h4>${titulo}</h4>`;
+
         const exportBtn = document.createElement('button');
         exportBtn.textContent = '⬇ Exportar gráfico como imagen';
         exportBtn.style.cssText = 'display:block; margin: 0 auto 12px auto; padding: 6px 14px; font-size: 13px; cursor: pointer; background: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px;';
@@ -809,9 +874,8 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.id = 'history-svg-chart';
         chartContainer.appendChild(svg);
 
-        // Tabla de datos
         let tableHTML = `<table class="analysis-table" style="margin-top:20px;">
-            <thead><tr><th>Evaluación</th><th>Promedio</th><th>Puntaje Máx.</th><th>% Logro</th><th>Estudiantes eval.</th></tr></thead><tbody>`;
+            <thead><tr><th>Evaluación</th><th>${selectedStudent ? 'Puntaje' : 'Promedio'}</th><th>Puntaje Máx.</th><th>% Logro</th>${!selectedStudent ? '<th>Estudiantes eval.</th>' : ''}</tr></thead><tbody>`;
         chartData.forEach(d => {
             const perc = (d.value / d.maxValue * 100).toFixed(0);
             const color = perc >= 75 ? '#28a745' : perc >= 50 ? '#e0a800' : '#dc3545';
@@ -820,13 +884,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="text-align:center;">${d.value.toFixed(2)}</td>
                 <td style="text-align:center;">${d.maxValue}</td>
                 <td style="text-align:center; color:${color}; font-weight:bold;">${perc}%</td>
-                <td style="text-align:center;">${d.evaluatedCount}</td>
+                ${!selectedStudent ? `<td style="text-align:center;">${d.evaluatedCount}</td>` : ''}
             </tr>`;
         });
         tableHTML += `</tbody></table>`;
         chartContainer.insertAdjacentHTML('beforeend', tableHTML);
 
-        // Lógica exportar imagen
         exportBtn.addEventListener('click', () => {
             const svgEl = document.getElementById('history-svg-chart');
             const svgData = new XMLSerializer().serializeToString(svgEl);
@@ -837,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
             img.onload = () => {
                 ctx.drawImage(img, 0, 0);
                 const a = document.createElement('a');
-                a.download = `grafico_${selectedIndicator}_${selectedCourse}.png`.replace(/\s+/g, '_');
+                a.download = `grafico_${selectedIndicator}_${selectedStudent || selectedCourse}.png`.replace(/\s+/g, '_');
                 a.href = canvas.toDataURL('image/png');
                 a.click();
             };
