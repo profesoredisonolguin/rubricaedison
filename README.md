@@ -4,64 +4,336 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rúbrica de Evaluación Personalizable</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        h1, h2 { text-align: center; color: #333; }
-        h4 { margin-top: 0; margin-bottom: 10px; text-align: center; }
-        .rubrica-section, .history-section { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: #fff; }
-        #view-history-button { font-size: 14px; padding: 8px 12px; vertical-align: middle; margin-left: 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #student-data-toggle-button { display: block; margin: 10px auto; padding: 8px 15px; font-size: 14px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; }
-        #student-data-editor { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background-color: #fff; display: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg: #f5f3ee;
+            --surface: #ffffff;
+            --surface2: #faf9f6;
+            --border: #e0d9ce;
+            --accent: #8b6914;
+            --accent2: #b8891e;
+            --accent-light: #f5e9cc;
+            --text: #2c2416;
+            --text-muted: #8a7d6b;
+            --green: #2d7d4f;
+            --green-light: #e8f5ee;
+            --red: #c0392b;
+            --red-light: #fdecea;
+            --blue: #1a5fa8;
+            --blue-light: #e8f0fb;
+            --teal: #0d7377;
+            --teal-light: #e6f4f4;
+            --amber: #b8891e;
+            --amber-light: #fdf3dc;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px 16px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 24px rgba(139,105,20,0.08);
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            color: var(--accent);
+            text-align: center;
+            letter-spacing: 0.02em;
+        }
+
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            color: var(--accent2);
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        h3 { font-size: 1rem; color: var(--text); margin-bottom: 8px; }
+        h4 { text-align: center; color: var(--text); margin-bottom: 12px; font-size: 1rem; }
+        p { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 10px; line-height: 1.6; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+        .rubrica-section, .history-section {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        #view-history-button {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px; font-weight: 500;
+            padding: 7px 16px;
+            vertical-align: middle; margin-left: 12px;
+            background: var(--accent-light);
+            color: var(--accent);
+            border: 1px solid var(--border);
+            border-radius: 20px; cursor: pointer; transition: all 0.2s;
+        }
+        #view-history-button:hover { background: var(--accent); color: white; }
+
+        #student-data-toggle-button, #indicators-toggle-button {
+            display: block; margin: 10px auto;
+            padding: 8px 20px;
+            font-family: 'DM Sans', sans-serif; font-size: 13px;
+            cursor: pointer;
+            background: var(--surface2); color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 20px; transition: all 0.2s;
+        }
+        #student-data-toggle-button:hover, #indicators-toggle-button:hover {
+            border-color: var(--accent); color: var(--accent); background: var(--accent-light);
+        }
+
+        #student-data-editor { display: none; }
         #student-data-editor.visible { display: block; }
-        #student-data-editor h2 { margin-top: 0; margin-bottom: 15px; color: #007bff; }
-        #student-data-textarea { width: 100%; min-height: 250px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: "Courier New", Courier, monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
+        #student-data-textarea {
+            width: 100%; min-height: 250px; padding: 12px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text);
+            font-family: "Courier New", monospace; font-size: 13px; resize: vertical;
+        }
+        #student-data-textarea:focus { outline: 2px solid var(--accent2); }
+
         .editor-buttons { text-align: right; margin-top: 10px; }
-        .editor-buttons button { padding: 8px 15px; font-size: 14px; cursor: pointer; border: none; border-radius: 5px; }
-        #save-student-data-button { background-color: #28a745; color: white; }
-        #reset-student-data-button { background-color: #dc3545; color: white; margin-left: 10px; }
+        .editor-buttons button {
+            padding: 8px 18px; font-family: 'DM Sans', sans-serif;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            border: none; border-radius: 20px; transition: all 0.2s;
+        }
+        .editor-buttons button:hover { opacity: 0.85; }
+        #save-student-data-button { background: var(--green); color: white; }
+        #reset-student-data-button { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c2; margin-left: 8px; }
+        #reset-student-data-button:hover { background: var(--red); color: white; }
+
+        #drive-connect-button {
+            padding: 5px 14px; font-size: 12px; font-weight: 500;
+            cursor: pointer; background: transparent; color: var(--text-muted);
+            border: 1px solid var(--border); border-radius: 20px; transition: all 0.2s;
+        }
+        #drive-connect-button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+        #drive-status { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
         .course-selection-container { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
-        .course-selection-container label, .course-selection-container select { font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; vertical-align: top; word-wrap: break-word; }
-        th { background-color: #007bff; color: white; font-weight: bold; }
-        .descriptor-table tr:nth-child(even), .analysis-table tr:nth-child(even) { background-color: #f2f2f2; }
+        .course-selection-container label { font-size: 14px; font-weight: 500; color: var(--text-muted); }
+
+        select {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 14px; font-family: 'DM Sans', sans-serif;
+            font-size: 14px; cursor: pointer; outline: none; transition: border-color 0.2s;
+        }
+        select:focus { border-color: var(--accent2); }
+
+        input[type="text"] {
+            background: var(--surface); color: var(--text);
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+            font-size: 14px; width: 100%; outline: none; transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--accent2); }
+        label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+
+        #generate-button {
+            display: block; margin: 20px auto;
+            padding: 12px 36px;
+            font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white; border: none; border-radius: 30px;
+            letter-spacing: 0.03em; transition: transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(139,105,20,0.25);
+        }
+        #generate-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139,105,20,0.35); }
+        #generate-button:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+        #drive-warning { color: var(--text-muted); font-size: 12px; text-align: center; margin-top: 6px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; word-wrap: break-word; font-size: 13px; }
+        th { background: var(--accent); color: white; font-weight: 600; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+        .descriptor-table tr:nth-child(even), .analysis-table tr:nth-child(even) { background: var(--surface2); }
+        .descriptor-table tr:hover, .analysis-table tr:hover { background: var(--accent-light); }
         .descriptor-table th:first-child, .descriptor-table td:first-child { width: 40px; text-align: center; }
         .descriptor-table .max-score-selection { width: 80px; text-align: center; }
-        .score-buttons, .score-buttons-selection { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-top: 10px; width: 60px; }
-        .score-button { background-color: #eee; border: 1px solid #ccc; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
-        .score-button.selected { background-color: #28a745; color: white; border-color: #218838; }
-        #generate-button { display: block; margin: 20px auto; padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
-        #rubrica-generada { margin-top: 30px; overflow-x: auto; }
+
+        .score-buttons, .score-buttons-selection { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; margin-top: 6px; width: 60px; }
+        .score-button {
+            background: var(--surface); border: 1px solid var(--border);
+            color: var(--text-muted); padding: 4px 9px; cursor: pointer;
+            border-radius: 8px; font-size: 12px; font-weight: 600;
+            font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+        }
+        .score-button:hover { border-color: var(--accent2); color: var(--accent); }
+        .score-button.selected { background: var(--green); color: white; border-color: var(--green); }
+
+        #rubrica-generada { margin-top: 24px; overflow-x: auto; }
         .compact-rubric-table { width: 100%; border-collapse: collapse; }
         .compact-rubric-table th, .compact-rubric-table td { text-align: center; vertical-align: middle; word-wrap: break-word; white-space: normal; }
         .compact-rubric-table th:first-child, .compact-rubric-table td:first-child { min-width: 120px; max-width: 200px; text-align: left; }
-        .compact-rubric-table .total-score-cell, .compact-rubric-table .final-grade-cell { width: 65px; font-size: 1em; font-weight: bold; color: #333; background-color: #e9ecef; }
-        .student-absent { background-color: #f0f0f0 !important; color: #999; }
-        .student-absent .score-button { pointer-events: none; background-color: #e9ecef; }
-        .progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 4px; height: 20px; overflow: hidden; position: relative; }
-        .progress-bar { height: 100%; }
-        .progress-bar-text { position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; color: #212529; text-shadow: 1px 1px 1px rgba(255,255,255,0.7); }
-        .participation-summary { background-color: #e7f3fe; border: 1px solid #bce8f1; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .compact-rubric-table .total-score-cell, .compact-rubric-table .final-grade-cell { width: 65px; font-size: 0.95em; font-weight: 700; color: var(--accent); background: var(--accent-light); }
+        .student-absent { background: var(--surface2) !important; color: var(--text-muted) !important; }
+        .student-absent .score-button { pointer-events: none; opacity: 0.35; }
+
+        #analysis-buttons-container button {
+            padding: 10px 20px; font-family: 'DM Sans', sans-serif;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            border: none; border-radius: 20px; transition: all 0.2s; margin: 4px;
+        }
+        #analysis-buttons-container button:hover { opacity: 0.88; transform: translateY(-1px); }
+        #analyze-indicators-button, #analyze-summary-button { background: var(--blue); color: white; }
+        #export-button { background: var(--green); color: white; }
+        #analysis-buttons-container label[for="import-input"] {
+            display: inline-block; padding: 10px 20px;
+            font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+            cursor: pointer; background: var(--surface2); color: var(--text-muted);
+            border: 1px solid var(--border); border-radius: 20px; margin: 4px; transition: all 0.2s;
+        }
+        #analysis-buttons-container label[for="import-input"]:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+        .progress-bar-container { width: 100%; background: var(--bg); border-radius: 20px; height: 22px; overflow: hidden; position: relative; }
+        .progress-bar { height: 100%; border-radius: 20px; }
+        .progress-bar-text { position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .participation-summary { background: var(--blue-light); border: 1px solid #c0d4f0; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
         .participation-bar-wrapper { display: flex; align-items: center; gap: 10px; }
         .participation-bar-wrapper .progress-bar-container { flex-grow: 1; }
-        .participation-bar-wrapper .label, .participation-bar-wrapper .percentage { font-weight: bold; white-space: nowrap; }
+        .participation-bar-wrapper .label, .participation-bar-wrapper .percentage { font-weight: 600; white-space: nowrap; font-size: 13px; }
+
+        #saved-evaluations-container h3 { color: var(--amber); font-family: 'Playfair Display', serif; margin-bottom: 8px; }
+        #saved-evaluations-list div { background: var(--amber-light) !important; border: 1px solid #e8d4a0; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+        #saved-evaluations-list div:hover { background: #fde9b0 !important; border-color: var(--amber); transform: translateX(4px); }
+
         #history-view { display: none; }
-        #chart-container { border: 1px dashed #ccc; padding: 20px; text-align: center; background: white; min-height: 300px; }
-        #saved-evaluations-list div:hover { background-color: #d0e8fd !important; }
-        .indicator-cell-input { width: 100%; border: none; background: transparent; font-family: Arial, sans-serif; font-size: 13px; resize: vertical; min-height: 50px; padding: 2px; box-sizing: border-box; }
-        .indicator-cell-input:focus { outline: 1px solid #007bff; border-radius: 3px; background: #f0f8ff; }
-        .indicator-name-input { width: 100%; border: none; background: transparent; font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; padding: 2px; box-sizing: border-box; }
-        .indicator-name-input:focus { outline: 1px solid #007bff; border-radius: 3px; background: #f0f8ff; }
-        .delete-indicator-btn { background: #dc3545; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 13px; }
+        #chart-container { border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: var(--surface2); min-height: 300px; }
+
+        .mode-btn, .chart-type-btn {
+            padding: 7px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+            cursor: pointer; background: var(--surface); color: var(--text-muted);
+            border: 1px solid var(--border); border-radius: 20px; margin: 0 4px; transition: all 0.2s;
+        }
+        .mode-btn:hover, .chart-type-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+        .active-mode-btn, .active-chart-btn { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+
+        #back-to-rubric-button {
+            padding: 7px 16px; font-family: 'DM Sans', sans-serif; font-size: 13px;
+            background: var(--surface2); color: var(--text-muted);
+            border: 1px solid var(--border); border-radius: 20px; cursor: pointer; transition: all 0.2s;
+        }
+        #back-to-rubric-button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+        .indicator-cell-input { width: 100%; border: none; background: transparent; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; resize: vertical; min-height: 50px; padding: 4px; }
+        .indicator-cell-input:focus { outline: 1px solid var(--accent2); border-radius: 4px; background: var(--accent-light); }
+        .indicator-name-input { width: 100%; border: none; background: transparent; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; padding: 4px; }
+        .indicator-name-input:focus { outline: 1px solid var(--accent2); border-radius: 4px; background: var(--accent-light); }
+        .delete-indicator-btn { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c2; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .delete-indicator-btn:hover { background: var(--red); color: white; }
+        #add-indicator-button { background: var(--accent-light); color: var(--accent); border: 1px solid var(--border); border-radius: 20px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        #add-indicator-button:hover { background: var(--accent); color: white; }
+        #save-indicators-button { background: var(--green); color: white; border: none; border-radius: 20px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+        #reset-indicators-button { background: var(--red-light); color: var(--red); border: 1px solid #f5c6c2; border-radius: 20px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; margin-left: 8px; transition: all 0.2s; }
+        #reset-indicators-button:hover { background: var(--red); color: white; }
+
+        #compare-courses-checkboxes label { background: var(--surface) !important; border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); transition: all 0.2s; }
+        #compare-courses-checkboxes label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light) !important; }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="container">
     <div id="main-view">
+        <div style="text-align:center; margin-bottom: 10px;">
+            <svg width="420" height="80" viewBox="0 0 420 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;">
+                <defs>
+                    <linearGradient id="lineGrad" x1="0" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#e0d9ce" stop-opacity="0"/>
+                        <stop offset="20%" stop-color="#e0d9ce" stop-opacity="1"/>
+                        <stop offset="80%" stop-color="#e0d9ce" stop-opacity="1"/>
+                        <stop offset="100%" stop-color="#e0d9ce" stop-opacity="0"/>
+                    </linearGradient>
+                    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#c9a84c"/>
+                        <stop offset="100%" stop-color="#8b6914"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- Cinco líneas del pentagrama con degradado -->
+                <line x1="0" y1="30" x2="420" y2="30" stroke="url(#lineGrad)" stroke-width="1"/>
+                <line x1="0" y1="38" x2="420" y2="38" stroke="url(#lineGrad)" stroke-width="1"/>
+                <line x1="0" y1="46" x2="420" y2="46" stroke="url(#lineGrad)" stroke-width="1"/>
+                <line x1="0" y1="54" x2="420" y2="54" stroke="url(#lineGrad)" stroke-width="1"/>
+                <line x1="0" y1="62" x2="420" y2="62" stroke="url(#lineGrad)" stroke-width="1"/>
+
+                <!-- Clave de sol grande y elegante -->
+                <text x="28" y="66" font-family="Georgia, serif" font-size="52" fill="url(#goldGrad)" opacity="0.95" style="font-style:italic;">𝄞</text>
+
+                <!-- Grupo de notas con plicas curvas (izquierda) -->
+                <ellipse cx="108" cy="55" rx="7" ry="5" transform="rotate(-15 108 55)" fill="#8b6914"/>
+                <line x1="114.5" y1="53" x2="114.5" y2="22" stroke="#8b6914" stroke-width="1.8"/>
+                <ellipse cx="130" cy="47" rx="7" ry="5" transform="rotate(-15 130 47)" fill="#8b6914"/>
+                <line x1="136.5" y1="45" x2="136.5" y2="22" stroke="#8b6914" stroke-width="1.8"/>
+                <line x1="114.5" y1="22" x2="136.5" y2="22" stroke="#8b6914" stroke-width="3"/>
+                <line x1="114.5" y1="28" x2="136.5" y2="28" stroke="#8b6914" stroke-width="3"/>
+
+                <!-- Nota blanca elegante -->
+                <ellipse cx="162" cy="43" rx="7.5" ry="5" transform="rotate(-15 162 43)" fill="none" stroke="#8b6914" stroke-width="2"/>
+                <line x1="168.5" y1="41" x2="168.5" y2="14" stroke="#8b6914" stroke-width="1.8"/>
+                <path d="M168.5 14 Q180 10 176 22" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+                <!-- Silencio de corchea -->
+                <text x="186" y="55" font-family="Georgia, serif" font-size="22" fill="#b8891e" opacity="0.8">𝄾</text>
+
+                <!-- Nota con acento -->
+                <ellipse cx="218" cy="51" rx="7" ry="5" transform="rotate(-15 218 51)" fill="#8b6914"/>
+                <line x1="224.5" y1="49" x2="224.5" y2="20" stroke="#8b6914" stroke-width="1.8"/>
+                <path d="M224.5 20 Q236 15 232 27" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                <text x="210" y="72" font-family="Georgia, serif" font-size="9" fill="#b8891e" font-style="italic">sf</text>
+
+                <!-- Grupo ligado -->
+                <ellipse cx="250" cy="47" rx="7" ry="5" transform="rotate(-15 250 47)" fill="#8b6914"/>
+                <line x1="256.5" y1="45" x2="256.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
+                <ellipse cx="272" cy="43" rx="7" ry="5" transform="rotate(-15 272 43)" fill="#8b6914"/>
+                <line x1="278.5" y1="41" x2="278.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
+                <line x1="256.5" y1="18" x2="278.5" y2="18" stroke="#8b6914" stroke-width="3"/>
+                <path d="M248 40 Q261 33 280 38" stroke="#8b6914" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+                <!-- Dinámicas -->
+                <text x="297" y="58" font-family="Georgia, serif" font-size="18" fill="#c9a84c" font-style="italic" opacity="0.9">f</text>
+                <text x="313" y="55" font-family="Georgia, serif" font-size="13" fill="#b8891e" font-style="italic" opacity="0.7">p</text>
+
+                <!-- Nota final con puntillo -->
+                <ellipse cx="345" cy="47" rx="7" ry="5" transform="rotate(-15 345 47)" fill="#8b6914"/>
+                <line x1="351.5" y1="45" x2="351.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
+                <circle cx="357" cy="46" r="2.5" fill="#8b6914"/>
+
+                <!-- Doble barra final -->
+                <line x1="378" y1="30" x2="378" y2="62" stroke="#8b6914" stroke-width="1.5"/>
+                <line x1="383" y1="30" x2="383" y2="62" stroke="#8b6914" stroke-width="4"/>
+
+                <!-- Adorno -->
+                <text x="393" y="36" font-size="13" fill="#c9a84c" opacity="0.6">✦</text>
+            </svg>
+        </div>
         <h1 style="text-align:center;">
-            Rúbrica de Evaluación Personalizable
-            <button id="view-history-button">Ver Historial de Avances</button>
+            Rúbrica de Evaluación — Educación Musical
+            <button id="view-history-button">📊 Historial</button>
         </h1>
 
         <button id="student-data-toggle-button">Mostrar/Ocultar Editor de Estudiantes</button>
@@ -164,24 +436,56 @@
             <button id="back-to-rubric-button" style="padding: 8px 12px; background-color: #6c757d; color: white; border: none; border-radius: 5px; cursor:pointer;">Volver a la Rúbrica</button>
         </div>
         <hr>
-        <p>Selecciona un curso, un indicador y opcionalmente un estudiante para ver el progreso.</p>
-        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <label for="history-course-select" style="font-weight: bold;">1. Selecciona un Curso:</label><br>
-                <select id="history-course-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
-            </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label for="history-indicator-select" style="font-weight: bold;">2. Selecciona un Indicador:</label><br>
-                <select id="history-indicator-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
-            </div>
-            <div style="flex: 1; min-width: 200px;">
-                <label for="history-student-select" style="font-weight: bold;">3. Selecciona un Estudiante:</label><br>
-                <select id="history-student-select" style="width: 100%; padding: 8px; margin-top: 5px;">
-                    <option value="">Todos (promedio curso)</option>
-                </select>
+
+        <!-- Toggle modo -->
+        <div style="margin-bottom: 15px;">
+            <button id="mode-single-btn" class="mode-btn active-mode-btn">👤 Un curso</button>
+            <button id="mode-compare-btn" class="mode-btn">⚖️ Comparar cursos</button>
+        </div>
+
+        <!-- Modo un curso -->
+        <div id="mode-single">
+            <p>Selecciona un curso, un indicador y opcionalmente un estudiante para ver el progreso.</p>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="history-course-select" style="font-weight: bold;">1. Selecciona un Curso:</label><br>
+                    <select id="history-course-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="history-indicator-select" style="font-weight: bold;">2. Selecciona un Indicador:</label><br>
+                    <select id="history-indicator-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="history-student-select" style="font-weight: bold;">3. Selecciona un Estudiante:</label><br>
+                    <select id="history-student-select" style="width: 100%; padding: 8px; margin-top: 5px;">
+                        <option value="">Todos (promedio curso)</option>
+                    </select>
+                </div>
             </div>
         </div>
+
+        <!-- Modo comparar -->
+        <div id="mode-compare" style="display:none;">
+            <p>Selecciona un indicador y los cursos que quieres comparar.</p>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="compare-indicator-select" style="font-weight: bold;">1. Selecciona un Indicador:</label><br>
+                    <select id="compare-indicator-select" style="width: 100%; padding: 8px; margin-top: 5px;"></select>
+                </div>
+                <div style="flex: 2; min-width: 200px;">
+                    <label style="font-weight: bold;">2. Selecciona los Cursos:</label>
+                    <div id="compare-courses-checkboxes" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="chart-container"></div>
+        <div style="text-align: center; margin-top: 10px;">
+            <span style="font-size: 13px; color: #666; margin-right: 10px;">Tipo de gráfico:</span>
+            <button class="chart-type-btn active-chart-btn" data-type="line">📈 Línea</button>
+            <button class="chart-type-btn" data-type="bar">📊 Barras</button>
+            <button class="chart-type-btn" data-type="scatter">⚬ Dispersión</button>
+        </div>
     </div>
 </div>
 
@@ -672,6 +976,35 @@ document.addEventListener('DOMContentLoaded', () => {
     historyIndicatorSelect.addEventListener("change", () => { populateHistoryStudents(); renderHistoryChart(); });
     historyStudentSelect.addEventListener("change", renderHistoryChart);
 
+    let currentChartType = 'line';
+    let currentMode = 'single';
+
+    // Toggle de modo
+    document.getElementById('mode-single-btn').addEventListener('click', () => {
+        currentMode = 'single';
+        document.getElementById('mode-single').style.display = 'block';
+        document.getElementById('mode-compare').style.display = 'none';
+        document.getElementById('mode-single-btn').classList.add('active-mode-btn');
+        document.getElementById('mode-compare-btn').classList.remove('active-mode-btn');
+        renderHistoryChart();
+    });
+    document.getElementById('mode-compare-btn').addEventListener('click', () => {
+        currentMode = 'compare';
+        document.getElementById('mode-single').style.display = 'none';
+        document.getElementById('mode-compare').style.display = 'block';
+        document.getElementById('mode-compare-btn').classList.add('active-mode-btn');
+        document.getElementById('mode-single-btn').classList.remove('active-mode-btn');
+        renderHistoryChart();
+    });
+    document.querySelectorAll('.chart-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active-chart-btn'));
+            btn.classList.add('active-chart-btn');
+            currentChartType = btn.dataset.type;
+            renderHistoryChart();
+        });
+    });
+
     function displaySavedEvaluations() {
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
         savedEvaluationsList.innerHTML = '';
@@ -748,23 +1081,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function populateHistoryFilters() {
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-        const courses = [...new Set(allEvaluations.map(e => e.course))];
-        const indicators = [...new Set(allEvaluations.flatMap(e => e.indicators))];
+        const courses = [...new Set(allEvaluations.map(e => e.course))].sort();
+        const indicators = [...new Set(allEvaluations.flatMap(e => e.indicators))].sort();
 
+        // Modo un curso
         historyCourseSelect.innerHTML = '<option value="">Selecciona un curso...</option>';
-        courses.sort().forEach(course => {
+        courses.forEach(course => {
             const option = document.createElement('option');
             option.value = course; option.textContent = course;
             historyCourseSelect.appendChild(option);
         });
-
         historyIndicatorSelect.innerHTML = '<option value="">Selecciona un indicador...</option>';
-        indicators.sort().forEach(indicator => {
+        indicators.forEach(indicator => {
             const option = document.createElement('option');
             option.value = indicator; option.textContent = indicator;
             historyIndicatorSelect.appendChild(option);
         });
 
+        // Modo comparar
+        const compareIndicatorSelect = document.getElementById('compare-indicator-select');
+        compareIndicatorSelect.innerHTML = '<option value="">Selecciona un indicador...</option>';
+        indicators.forEach(indicator => {
+            const option = document.createElement('option');
+            option.value = indicator; option.textContent = indicator;
+            compareIndicatorSelect.appendChild(option);
+        });
+
+        const checkboxContainer = document.getElementById('compare-courses-checkboxes');
+        checkboxContainer.innerHTML = '';
+        courses.forEach(course => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex; align-items:center; gap:5px; background:#e7f3fe; padding:5px 10px; border-radius:4px; cursor:pointer; font-size:14px;';
+            label.innerHTML = `<input type="checkbox" value="${course}"> ${course}`;
+            label.querySelector('input').addEventListener('change', renderHistoryChart);
+            checkboxContainer.appendChild(label);
+        });
+
+        compareIndicatorSelect.addEventListener('change', renderHistoryChart);
         populateHistoryStudents();
         renderHistoryChart();
     }
@@ -801,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderHistoryChart() {
+        if (currentMode === 'compare') { renderCompareChart(); return; }
         const selectedCourse = historyCourseSelect.value;
         const selectedIndicator = historyIndicatorSelect.value;
         const selectedStudent = historyStudentSelect ? historyStudentSelect.value : '';
@@ -870,7 +1224,9 @@ document.addEventListener('DOMContentLoaded', () => {
         exportBtn.style.cssText = 'display:block; margin: 0 auto 12px auto; padding: 6px 14px; font-size: 13px; cursor: pointer; background: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px;';
         chartContainer.appendChild(exportBtn);
 
-        const svg = createLineChart(chartData);
+        const svg = currentChartType === 'bar' ? createBarChart(chartData)
+                  : currentChartType === 'scatter' ? createScatterChart(chartData)
+                  : createLineChart(chartData);
         svg.id = 'history-svg-chart';
         chartContainer.appendChild(svg);
 
@@ -973,6 +1329,252 @@ document.addEventListener('DOMContentLoaded', () => {
         return svg;
     }
 
+    function createBarChart(data) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        const width = 800, height = 400;
+        const margin = { top: 20, right: 20, bottom: 120, left: 40 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.style.backgroundColor = '#f9f9f9';
+
+        const g = document.createElementNS(svgNS, "g");
+        g.setAttribute("transform", `translate(${margin.left}, ${margin.top})`);
+        svg.appendChild(g);
+
+        const maxValue = Math.max(...data.map(d => d.maxValue), 1);
+        for (let i = 0; i <= maxValue; i++) {
+            const y = chartHeight - (i / maxValue) * chartHeight;
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", 0); line.setAttribute("x2", chartWidth);
+            line.setAttribute("y1", y); line.setAttribute("y2", y);
+            line.setAttribute("stroke", "#e0e0e0");
+            g.appendChild(line);
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", -10); text.setAttribute("y", y + 5);
+            text.setAttribute("text-anchor", "end"); text.setAttribute("font-size", "12");
+            text.textContent = i; g.appendChild(text);
+        }
+
+        const barWidth = Math.min(60, chartWidth / data.length * 0.6);
+        const step = chartWidth / data.length;
+        data.forEach((d, i) => {
+            const x = i * step + step / 2 - barWidth / 2;
+            const barH = (d.value / maxValue) * chartHeight;
+            const y = chartHeight - barH;
+            const perc = d.value / d.maxValue;
+            const color = perc >= 0.75 ? '#28a745' : perc >= 0.5 ? '#ffc107' : '#dc3545';
+            const rect = document.createElementNS(svgNS, "rect");
+            rect.setAttribute("x", x); rect.setAttribute("y", y);
+            rect.setAttribute("width", barWidth); rect.setAttribute("height", barH);
+            rect.setAttribute("fill", color); rect.setAttribute("rx", "3");
+            g.appendChild(rect);
+            const val = document.createElementNS(svgNS, "text");
+            val.setAttribute("x", x + barWidth / 2); val.setAttribute("y", y - 5);
+            val.setAttribute("text-anchor", "middle"); val.setAttribute("font-size", "12");
+            val.setAttribute("fill", "#333"); val.textContent = d.value.toFixed(1);
+            g.appendChild(val);
+            const label = document.createElementNS(svgNS, "text");
+            label.setAttribute("x", x + barWidth / 2); label.setAttribute("y", chartHeight + 20);
+            label.setAttribute("text-anchor", "start"); label.setAttribute("font-size", "11");
+            label.setAttribute("transform", `rotate(45, ${x + barWidth / 2}, ${chartHeight + 20})`);
+            label.textContent = d.label; g.appendChild(label);
+        });
+        return svg;
+    }
+
+    function createScatterChart(data) {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        const width = 800, height = 400;
+        const margin = { top: 20, right: 20, bottom: 120, left: 40 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.style.backgroundColor = '#f9f9f9';
+
+        const g = document.createElementNS(svgNS, "g");
+        g.setAttribute("transform", `translate(${margin.left}, ${margin.top})`);
+        svg.appendChild(g);
+
+        const maxValue = Math.max(...data.map(d => d.maxValue), 1);
+        for (let i = 0; i <= maxValue; i++) {
+            const y = chartHeight - (i / maxValue) * chartHeight;
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", 0); line.setAttribute("x2", chartWidth);
+            line.setAttribute("y1", y); line.setAttribute("y2", y);
+            line.setAttribute("stroke", "#e0e0e0");
+            g.appendChild(line);
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", -10); text.setAttribute("y", y + 5);
+            text.setAttribute("text-anchor", "end"); text.setAttribute("font-size", "12");
+            text.textContent = i; g.appendChild(text);
+        }
+
+        const step = data.length > 1 ? chartWidth / (data.length - 1) : chartWidth / 2;
+        data.forEach((d, i) => {
+            const x = i * step;
+            const y = chartHeight - (d.value / maxValue) * chartHeight;
+            const perc = d.value / d.maxValue;
+            const color = perc >= 0.75 ? '#28a745' : perc >= 0.5 ? '#ffc107' : '#dc3545';
+            const circle = document.createElementNS(svgNS, "circle");
+            circle.setAttribute("cx", x); circle.setAttribute("cy", y);
+            circle.setAttribute("r", "8"); circle.setAttribute("fill", color);
+            g.appendChild(circle);
+            const val = document.createElementNS(svgNS, "text");
+            val.setAttribute("x", x); val.setAttribute("y", y - 12);
+            val.setAttribute("text-anchor", "middle"); val.setAttribute("font-size", "12");
+            val.setAttribute("fill", "#333"); val.textContent = d.value.toFixed(1);
+            g.appendChild(val);
+            const label = document.createElementNS(svgNS, "text");
+            label.setAttribute("x", x); label.setAttribute("y", chartHeight + 20);
+            label.setAttribute("text-anchor", "start"); label.setAttribute("font-size", "11");
+            label.setAttribute("transform", `rotate(45, ${x}, ${chartHeight + 20})`);
+            label.textContent = d.label; g.appendChild(label);
+        });
+        return svg;
+    }
+
+    function renderCompareChart() {
+        const selectedIndicator = document.getElementById('compare-indicator-select').value;
+        const selectedCourses = Array.from(document.querySelectorAll('#compare-courses-checkboxes input:checked')).map(cb => cb.value);
+        chartContainer.innerHTML = '';
+
+        if (!selectedIndicator || selectedCourses.length === 0) {
+            chartContainer.innerHTML = '<p>Selecciona un indicador y al menos un curso para comparar.</p>';
+            return;
+        }
+
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const COLORS = ['#007bff','#dc3545','#28a745','#fd7e14','#6f42c1','#17a2b8','#e83e8c','#20c997'];
+
+        // Recopilar datos por curso
+        const seriesData = selectedCourses.map((course, idx) => {
+            const evals = allEvaluations
+                .filter(e => e.course === course && e.indicators.includes(selectedIndicator))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+            const points = evals.map(evaluation => {
+                let totalScore = 0, count = 0;
+                const maxScore = (evaluation.indicatorMaxScores && evaluation.indicatorMaxScores[selectedIndicator]) || 4;
+                evaluation.results.forEach(r => {
+                    const v = r.scores[selectedIndicator];
+                    if (v !== null && !isNaN(parseFloat(v))) { totalScore += parseFloat(v); count++; }
+                });
+                return {
+                    label: `${evaluation.title} (${new Date(evaluation.date).toLocaleDateString('es-CL')})`,
+                    value: count > 0 ? totalScore / count : 0,
+                    maxValue: maxScore
+                };
+            });
+            return { course, points, color: COLORS[idx % COLORS.length] };
+        }).filter(s => s.points.length > 0);
+
+        if (seriesData.length === 0) {
+            chartContainer.innerHTML = '<p>No hay datos suficientes para los cursos seleccionados.</p>';
+            return;
+        }
+
+        chartContainer.innerHTML = `<h4>Comparación de "${selectedIndicator}" entre cursos</h4>`;
+
+        // Leyenda
+        const legend = document.createElement('div');
+        legend.style.cssText = 'display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; justify-content:center;';
+        seriesData.forEach(s => {
+            const item = document.createElement('span');
+            item.style.cssText = `background:${s.color}; color:white; padding:3px 10px; border-radius:10px; font-size:13px;`;
+            item.textContent = s.course;
+            legend.appendChild(item);
+        });
+        chartContainer.appendChild(legend);
+
+        // Gráfico multi-línea SVG
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        const width = 800, height = 400;
+        const margin = { top: 20, right: 20, bottom: 120, left: 40 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+        svg.style.backgroundColor = '#f9f9f9';
+        const g = document.createElementNS(svgNS, "g");
+        g.setAttribute("transform", `translate(${margin.left}, ${margin.top})`);
+        svg.appendChild(g);
+
+        const allPoints = seriesData.flatMap(s => s.points);
+        const maxValue = Math.max(...allPoints.map(d => d.maxValue), 1);
+        const allLabels = [...new Set(allPoints.map(d => d.label))].sort();
+
+        // Ejes Y
+        for (let i = 0; i <= maxValue; i++) {
+            const y = chartHeight - (i / maxValue) * chartHeight;
+            const line = document.createElementNS(svgNS, "line");
+            line.setAttribute("x1", 0); line.setAttribute("x2", chartWidth);
+            line.setAttribute("y1", y); line.setAttribute("y2", y);
+            line.setAttribute("stroke", "#e0e0e0"); g.appendChild(line);
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", -10); text.setAttribute("y", y + 5);
+            text.setAttribute("text-anchor", "end"); text.setAttribute("font-size", "12");
+            text.textContent = i; g.appendChild(text);
+        }
+
+        // Eje X labels
+        const step = allLabels.length > 1 ? chartWidth / (allLabels.length - 1) : chartWidth / 2;
+        allLabels.forEach((label, i) => {
+            const x = i * step;
+            const text = document.createElementNS(svgNS, "text");
+            text.setAttribute("x", x); text.setAttribute("y", chartHeight + 20);
+            text.setAttribute("text-anchor", "start"); text.setAttribute("font-size", "11");
+            text.setAttribute("transform", `rotate(45, ${x}, ${chartHeight + 20})`);
+            text.textContent = label; g.appendChild(text);
+        });
+
+        // Líneas por curso
+        seriesData.forEach(series => {
+            const pts = series.points.map(d => {
+                const i = allLabels.indexOf(d.label);
+                return { x: i * step, y: chartHeight - (d.value / maxValue) * chartHeight };
+            });
+            if (pts.length > 1) {
+                const path = document.createElementNS(svgNS, "path");
+                path.setAttribute("d", "M" + pts.map(p => `${p.x},${p.y}`).join(" L"));
+                path.setAttribute("fill", "none"); path.setAttribute("stroke", series.color);
+                path.setAttribute("stroke-width", "2.5"); g.appendChild(path);
+            }
+            pts.forEach(p => {
+                const circle = document.createElementNS(svgNS, "circle");
+                circle.setAttribute("cx", p.x); circle.setAttribute("cy", p.y);
+                circle.setAttribute("r", "5"); circle.setAttribute("fill", series.color);
+                g.appendChild(circle);
+            });
+        });
+
+        svg.id = 'history-svg-chart';
+        chartContainer.appendChild(svg);
+
+        // Tabla comparativa
+        let tableHTML = `<table class="analysis-table" style="margin-top:20px;"><thead><tr><th>Evaluación</th>${seriesData.map(s => `<th style="color:${s.color}">${s.course}</th>`).join('')}</tr></thead><tbody>`;
+        allLabels.forEach(label => {
+            tableHTML += `<tr><td>${label}</td>`;
+            seriesData.forEach(series => {
+                const point = series.points.find(p => p.label === label);
+                if (point) {
+                    const perc = (point.value / point.maxValue * 100).toFixed(0);
+                    const color = perc >= 75 ? '#28a745' : perc >= 50 ? '#e0a800' : '#dc3545';
+                    tableHTML += `<td style="text-align:center; color:${color}; font-weight:bold;">${point.value.toFixed(1)} (${perc}%)</td>`;
+                } else {
+                    tableHTML += `<td style="text-align:center; color:#ccc;">—</td>`;
+                }
+            });
+            tableHTML += `</tr>`;
+        });
+        tableHTML += `</tbody></table>`;
+        chartContainer.insertAdjacentHTML('beforeend', tableHTML);
+    }
+
     // --- Google Drive ---
     const DRIVE_CLIENT_ID = '644973578837-vse1u0e7u1c4m6j6pj849phspnlv7t4f.apps.googleusercontent.com';
     const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -1071,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cursoNombre = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`)
             .replace('_', ' ')
             .replace(/\b\w/g, l => l.toUpperCase());
-        const subFolderName = `Educación Musical ${cursoNombre}`;
+        const subFolderName = cursoNombre;
         const subFolderId = await driveGetOrCreateFolder(token, subFolderName, rootId);
         return subFolderId;
     }
