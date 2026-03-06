@@ -259,77 +259,13 @@
 <body>
 <div class="container">
     <div id="main-view">
-        <div style="text-align:center; margin-bottom: 10px;">
-            <svg width="420" height="80" viewBox="0 0 420 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;">
-                <defs>
-                    <linearGradient id="lineGrad" x1="0" y1="0" x2="420" y2="0" gradientUnits="userSpaceOnUse">
-                        <stop offset="0%" stop-color="#e0d9ce" stop-opacity="0"/>
-                        <stop offset="20%" stop-color="#e0d9ce" stop-opacity="1"/>
-                        <stop offset="80%" stop-color="#e0d9ce" stop-opacity="1"/>
-                        <stop offset="100%" stop-color="#e0d9ce" stop-opacity="0"/>
-                    </linearGradient>
-                    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#c9a84c"/>
-                        <stop offset="100%" stop-color="#8b6914"/>
-                    </linearGradient>
-                </defs>
-
-                <!-- Cinco líneas del pentagrama con degradado -->
-                <line x1="0" y1="30" x2="420" y2="30" stroke="url(#lineGrad)" stroke-width="1"/>
-                <line x1="0" y1="38" x2="420" y2="38" stroke="url(#lineGrad)" stroke-width="1"/>
-                <line x1="0" y1="46" x2="420" y2="46" stroke="url(#lineGrad)" stroke-width="1"/>
-                <line x1="0" y1="54" x2="420" y2="54" stroke="url(#lineGrad)" stroke-width="1"/>
-                <line x1="0" y1="62" x2="420" y2="62" stroke="url(#lineGrad)" stroke-width="1"/>
-
-                <!-- Clave de sol grande y elegante -->
-                <text x="28" y="66" font-family="Georgia, serif" font-size="52" fill="url(#goldGrad)" opacity="0.95" style="font-style:italic;">𝄞</text>
-
-                <!-- Grupo de notas con plicas curvas (izquierda) -->
-                <ellipse cx="108" cy="55" rx="7" ry="5" transform="rotate(-15 108 55)" fill="#8b6914"/>
-                <line x1="114.5" y1="53" x2="114.5" y2="22" stroke="#8b6914" stroke-width="1.8"/>
-                <ellipse cx="130" cy="47" rx="7" ry="5" transform="rotate(-15 130 47)" fill="#8b6914"/>
-                <line x1="136.5" y1="45" x2="136.5" y2="22" stroke="#8b6914" stroke-width="1.8"/>
-                <line x1="114.5" y1="22" x2="136.5" y2="22" stroke="#8b6914" stroke-width="3"/>
-                <line x1="114.5" y1="28" x2="136.5" y2="28" stroke="#8b6914" stroke-width="3"/>
-
-                <!-- Nota blanca elegante -->
-                <ellipse cx="162" cy="43" rx="7.5" ry="5" transform="rotate(-15 162 43)" fill="none" stroke="#8b6914" stroke-width="2"/>
-                <line x1="168.5" y1="41" x2="168.5" y2="14" stroke="#8b6914" stroke-width="1.8"/>
-                <path d="M168.5 14 Q180 10 176 22" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-
-                <!-- Silencio de corchea -->
-                <text x="186" y="55" font-family="Georgia, serif" font-size="22" fill="#b8891e" opacity="0.8">𝄾</text>
-
-                <!-- Nota con acento -->
-                <ellipse cx="218" cy="51" rx="7" ry="5" transform="rotate(-15 218 51)" fill="#8b6914"/>
-                <line x1="224.5" y1="49" x2="224.5" y2="20" stroke="#8b6914" stroke-width="1.8"/>
-                <path d="M224.5 20 Q236 15 232 27" stroke="#8b6914" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-                <text x="210" y="72" font-family="Georgia, serif" font-size="9" fill="#b8891e" font-style="italic">sf</text>
-
-                <!-- Grupo ligado -->
-                <ellipse cx="250" cy="47" rx="7" ry="5" transform="rotate(-15 250 47)" fill="#8b6914"/>
-                <line x1="256.5" y1="45" x2="256.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
-                <ellipse cx="272" cy="43" rx="7" ry="5" transform="rotate(-15 272 43)" fill="#8b6914"/>
-                <line x1="278.5" y1="41" x2="278.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
-                <line x1="256.5" y1="18" x2="278.5" y2="18" stroke="#8b6914" stroke-width="3"/>
-                <path d="M248 40 Q261 33 280 38" stroke="#8b6914" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-
-                <!-- Dinámicas -->
-                <text x="297" y="58" font-family="Georgia, serif" font-size="18" fill="#c9a84c" font-style="italic" opacity="0.9">f</text>
-                <text x="313" y="55" font-family="Georgia, serif" font-size="13" fill="#b8891e" font-style="italic" opacity="0.7">p</text>
-
-                <!-- Nota final con puntillo -->
-                <ellipse cx="345" cy="47" rx="7" ry="5" transform="rotate(-15 345 47)" fill="#8b6914"/>
-                <line x1="351.5" y1="45" x2="351.5" y2="18" stroke="#8b6914" stroke-width="1.8"/>
-                <circle cx="357" cy="46" r="2.5" fill="#8b6914"/>
-
-                <!-- Doble barra final -->
-                <line x1="378" y1="30" x2="378" y2="62" stroke="#8b6914" stroke-width="1.5"/>
-                <line x1="383" y1="30" x2="383" y2="62" stroke="#8b6914" stroke-width="4"/>
-
-                <!-- Adorno -->
-                <text x="393" y="36" font-size="13" fill="#c9a84c" opacity="0.6">✦</text>
-            </svg>
+        <div style="text-align:center; margin-bottom: 8px;">
+            <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/b/b7/Music_notation.svg"
+                alt="Notación musical"
+                style="height: 48px; width: auto; opacity: 0.7; filter: sepia(0.5) saturate(0.6) hue-rotate(5deg) brightness(0.8);"
+                onerror="this.style.display='none'"
+            />
         </div>
         <h1 style="text-align:center;">
             Rúbrica de Evaluación — Educación Musical
