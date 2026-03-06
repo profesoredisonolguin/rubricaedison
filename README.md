@@ -253,6 +253,22 @@
 
         #compare-courses-checkboxes label { background: var(--surface) !important; border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); transition: all 0.2s; }
         #compare-courses-checkboxes label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light) !important; }
+
+        @media print {
+            body { background: white; padding: 0; font-family: 'DM Sans', Arial, sans-serif; }
+            .no-print { display: none !important; }
+            .container { box-shadow: none; border: none; padding: 0; margin: 0; max-width: 100%; }
+            #main-view > *:not(#pdf-print-area) { display: none !important; }
+            #pdf-print-area { display: block !important; }
+            table { font-size: 11px; }
+            th, td { padding: 6px 8px; }
+            .score-button { display: none; }
+            .score-button.selected { display: inline-block; background: #28a745; color: white; border-radius: 4px; padding: 2px 6px; font-size: 10px; }
+            h1 { font-size: 18px; color: #8b6914; }
+            h2 { font-size: 14px; color: #b8891e; }
+            .rubrica-section, .history-section { border: 1px solid #ddd; page-break-inside: avoid; margin-bottom: 16px; }
+            #pdf-print-area h3 { font-size: 13px; color: #8b6914; border-bottom: 1px solid #e0d9ce; padding-bottom: 4px; margin-bottom: 8px; }
+        }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -364,10 +380,12 @@
             <button id="analyze-indicators-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px; margin-right: 10px;">Ver Análisis por Indicador</button>
             <button id="analyze-summary-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px;">Ver Resumen de Calificaciones</button>
             <button id="ranking-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #8b6914; color: white; border: none; border-radius: 5px; margin-left: 10px;">🏆 Ranking del Curso</button>
+            <button id="risk-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #c0392b; color: white; border: none; border-radius: 5px; margin-left: 10px;">⚠️ Estudiantes en Riesgo</button>
             <hr style="margin: 15px 0; border-color: #ddd;">
             <button id="export-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">⬇ Exportar datos (.json)</button>
             <label for="import-input" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; display: inline-block;">⬆ Importar datos (.json)</label>
             <input type="file" id="import-input" accept=".json" style="display: none;">
+            <button id="pdf-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #c0392b; color: white; border: none; border-radius: 5px; margin-left: 10px;">🖨️ Exportar PDF</button>
 
         </div>
 
@@ -451,6 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const analyzeIndicatorsButton = document.getElementById('analyze-indicators-button');
     const analyzeSummaryButton = document.getElementById('analyze-summary-button');
     const rankingButton = document.getElementById('ranking-button');
+    const riskButton = document.getElementById('risk-button');
     const analysisResultsContainer = document.getElementById('analysis-results-container');
     const viewHistoryButton = document.getElementById('view-history-button');
     const backToRubricButton = document.getElementById('back-to-rubric-button');
@@ -866,6 +885,132 @@ document.addEventListener('DOMContentLoaded', () => {
     analyzeIndicatorsButton.addEventListener("click", generateIndicatorAnalysis);
     analyzeSummaryButton.addEventListener("click", generateSummaryAnalysis);
     rankingButton.addEventListener("click", generateRanking);
+    riskButton.addEventListener("click", generateRiskAlert);
+
+    document.getElementById('pdf-button').addEventListener('click', () => {
+        const curso = `${courseSelect.value}${letterSelect.value}`;
+        const titulo = evaluationTitleInput.value.trim() || 'Evaluación';
+        const fecha = new Date().toLocaleDateString('es-CL');
+
+        // Generar ranking y resumen para el PDF
+        generateRanking();
+        generateSummaryAnalysis();
+
+        // Construir área de impresión
+        const rubricHTML = document.getElementById('rubrica-generada').innerHTML;
+        const analysisHTML = document.getElementById('analysis-results-container').innerHTML;
+
+        let printArea = document.getElementById('pdf-print-area');
+        if (!printArea) {
+            printArea = document.createElement('div');
+            printArea.id = 'pdf-print-area';
+            printArea.style.display = 'none';
+            document.querySelector('.container').appendChild(printArea);
+        }
+
+        printArea.innerHTML = `
+            <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #c9a84c; padding-bottom: 12px;">
+                <div style="font-size: 28px; color: #c9a84c; font-family: Georgia, serif;">𝄞</div>
+                <h1 style="margin: 4px 0; color: #8b6914; font-family: Georgia, serif;">Rúbrica de Evaluación — Educación Musical</h1>
+                <div style="font-size: 13px; color: #b8891e; font-style: italic;">Profesor Edison Olguín</div>
+                <div style="font-size: 12px; color: #8a7d6b; margin-top: 4px;">${curso} &nbsp;·&nbsp; ${titulo} &nbsp;·&nbsp; ${fecha}</div>
+            </div>
+            <h3>Rúbrica</h3>
+            ${rubricHTML}
+            <div style="margin-top: 24px;">
+                <h3>Análisis y Ranking</h3>
+                ${analysisHTML}
+            </div>
+        `;
+
+        // Marcar elementos que no deben imprimirse
+        document.querySelectorAll('.container > div, .container > button').forEach(el => {
+            if (el.id !== 'pdf-print-area') el.classList.add('no-print');
+        });
+
+        window.print();
+
+        // Restaurar vista después de imprimir
+        setTimeout(() => {
+            document.querySelectorAll('.no-print').forEach(el => el.classList.remove('no-print'));
+            printArea.style.display = 'none';
+            printArea.innerHTML = '';
+        }, 1000);
+    });
+
+    function generateRiskAlert() {
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const courseKey = `${courseSelect.value}${letterSelect.value}`;
+        const courseEvals = allEvaluations
+            .filter(e => e.course === courseKey)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (courseEvals.length < 1) {
+            analysisResultsContainer.innerHTML = `<div class="rubrica-section"><p style="text-align:center; color:var(--text-muted);">Se necesita al menos 1 evaluación guardada para detectar estudiantes en riesgo.</p></div>`;
+            analysisResultsContainer.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // Recopilar notas por estudiante a través de las evaluaciones
+        const studentGrades = {};
+        courseEvals.forEach(ev => {
+            ev.results.forEach(r => {
+                if (!studentGrades[r.name]) studentGrades[r.name] = [];
+                const grade = parseFloat(r.finalGrade);
+                studentGrades[r.name].push({
+                    title: ev.title,
+                    date: new Date(ev.date).toLocaleDateString('es-CL'),
+                    grade: isNaN(grade) ? null : grade
+                });
+            });
+        });
+
+        // Detectar estudiantes con al menos 1 nota bajo 4.0
+        const atRisk = [];
+        for (const name in studentGrades) {
+            const grades = studentGrades[name].filter(g => g.grade !== null);
+            const lowEvals = grades.filter(g => g.grade < 4.0);
+            if (lowEvals.length >= 1) {
+                atRisk.push({ name, maxConsecutive: lowEvals.length, lowEvals, grades });
+            }
+        }
+
+        if (atRisk.length === 0) {
+            analysisResultsContainer.innerHTML = `<div class="rubrica-section" style="border-left: 4px solid var(--green);">
+                <h2 style="color:var(--green); margin-bottom:8px;">✅ Sin estudiantes en riesgo</h2>
+                <p>Ningún estudiante presenta 2 o más evaluaciones consecutivas bajo 4.0 en ${courseKey}.</p>
+            </div>`;
+            analysisResultsContainer.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        // Ordenar por mayor cantidad de evaluaciones bajas consecutivas
+        atRisk.sort((a, b) => b.maxConsecutive - a.maxConsecutive);
+
+        let html = `<div class="rubrica-section" style="border-left: 4px solid var(--red);">
+            <h2 style="color:var(--red); margin-bottom:4px;">⚠️ Estudiantes en Riesgo — ${courseKey}</h2>
+            <p style="margin-bottom:16px;">${atRisk.length} estudiante(s) con al menos una evaluación bajo 4.0.</p>
+            <table class="analysis-table">
+                <thead><tr><th>Estudiante</th><th>Evaluaciones bajo 4.0</th><th>Detalle</th></tr></thead>
+                <tbody>`;
+
+        atRisk.forEach(s => {
+            const detalles = s.lowEvals.map(g =>
+                `<span style="display:inline-block; background:var(--red-light); color:var(--red); border-radius:6px; padding:2px 8px; font-size:11px; margin:2px;">${g.title}: <b>${g.grade.toFixed(1)}</b></span>`
+            ).join(' ');
+            html += `<tr>
+                <td style="font-weight:600;">${s.name}</td>
+                <td style="text-align:center;">
+                    <span style="background:var(--red); color:white; border-radius:20px; padding:3px 12px; font-weight:700;">${s.maxConsecutive}</span>
+                </td>
+                <td>${detalles}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+        analysisResultsContainer.innerHTML = html;
+        analysisResultsContainer.scrollIntoView({ behavior: 'smooth' });
+    }
 
     function generateRanking() {
         const rubricTable = document.querySelector('.compact-rubric-table');
