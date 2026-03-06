@@ -1,3 +1,4 @@
+
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -253,22 +254,6 @@
 
         #compare-courses-checkboxes label { background: var(--surface) !important; border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); transition: all 0.2s; }
         #compare-courses-checkboxes label:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light) !important; }
-
-        @media print {
-            body { background: white; padding: 0; font-family: 'DM Sans', Arial, sans-serif; }
-            .no-print { display: none !important; }
-            .container { box-shadow: none; border: none; padding: 0; margin: 0; max-width: 100%; }
-            #main-view > *:not(#pdf-print-area) { display: none !important; }
-            #pdf-print-area { display: block !important; }
-            table { font-size: 11px; }
-            th, td { padding: 6px 8px; }
-            .score-button { display: none; }
-            .score-button.selected { display: inline-block; background: #28a745; color: white; border-radius: 4px; padding: 2px 6px; font-size: 10px; }
-            h1 { font-size: 18px; color: #8b6914; }
-            h2 { font-size: 14px; color: #b8891e; }
-            .rubrica-section, .history-section { border: 1px solid #ddd; page-break-inside: avoid; margin-bottom: 16px; }
-            #pdf-print-area h3 { font-size: 13px; color: #8b6914; border-bottom: 1px solid #e0d9ce; padding-bottom: 4px; margin-bottom: 8px; }
-        }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -385,7 +370,6 @@
             <button id="export-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">⬇ Exportar datos (.json)</button>
             <label for="import-input" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; display: inline-block;">⬆ Importar datos (.json)</label>
             <input type="file" id="import-input" accept=".json" style="display: none;">
-            <button id="pdf-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #c0392b; color: white; border: none; border-radius: 5px; margin-left: 10px;">🖨️ Exportar PDF</button>
 
         </div>
 
@@ -886,57 +870,6 @@ document.addEventListener('DOMContentLoaded', () => {
     analyzeSummaryButton.addEventListener("click", generateSummaryAnalysis);
     rankingButton.addEventListener("click", generateRanking);
     riskButton.addEventListener("click", generateRiskAlert);
-
-    document.getElementById('pdf-button').addEventListener('click', () => {
-        const curso = `${courseSelect.value}${letterSelect.value}`;
-        const titulo = evaluationTitleInput.value.trim() || 'Evaluación';
-        const fecha = new Date().toLocaleDateString('es-CL');
-
-        // Generar ranking y resumen para el PDF
-        generateRanking();
-        generateSummaryAnalysis();
-
-        // Construir área de impresión
-        const rubricHTML = document.getElementById('rubrica-generada').innerHTML;
-        const analysisHTML = document.getElementById('analysis-results-container').innerHTML;
-
-        let printArea = document.getElementById('pdf-print-area');
-        if (!printArea) {
-            printArea = document.createElement('div');
-            printArea.id = 'pdf-print-area';
-            printArea.style.display = 'none';
-            document.querySelector('.container').appendChild(printArea);
-        }
-
-        printArea.innerHTML = `
-            <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px solid #c9a84c; padding-bottom: 12px;">
-                <div style="font-size: 28px; color: #c9a84c; font-family: Georgia, serif;">𝄞</div>
-                <h1 style="margin: 4px 0; color: #8b6914; font-family: Georgia, serif;">Rúbrica de Evaluación — Educación Musical</h1>
-                <div style="font-size: 13px; color: #b8891e; font-style: italic;">Profesor Edison Olguín</div>
-                <div style="font-size: 12px; color: #8a7d6b; margin-top: 4px;">${curso} &nbsp;·&nbsp; ${titulo} &nbsp;·&nbsp; ${fecha}</div>
-            </div>
-            <h3>Rúbrica</h3>
-            ${rubricHTML}
-            <div style="margin-top: 24px;">
-                <h3>Análisis y Ranking</h3>
-                ${analysisHTML}
-            </div>
-        `;
-
-        // Marcar elementos que no deben imprimirse
-        document.querySelectorAll('.container > div, .container > button').forEach(el => {
-            if (el.id !== 'pdf-print-area') el.classList.add('no-print');
-        });
-
-        window.print();
-
-        // Restaurar vista después de imprimir
-        setTimeout(() => {
-            document.querySelectorAll('.no-print').forEach(el => el.classList.remove('no-print'));
-            printArea.style.display = 'none';
-            printArea.innerHTML = '';
-        }, 1000);
-    });
 
     function generateRiskAlert() {
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
@@ -1833,18 +1766,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return subFolderId;
     }
 
-    async function driveSaveFile(token, folderId, fileName, content) {
+    async function driveSaveFile(token, folderId, fileName, content, mimeType = 'application/json') {
         const searchRes = await fetch(
             `https://www.googleapis.com/drive/v3/files?q=name='${fileName}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
             { headers: { Authorization: `Bearer ${token}` } }
         );
         const searchData = await searchRes.json();
-        const blob = new Blob([content], { type: 'application/json' });
+        const blob = new Blob([content], { type: mimeType });
         if (searchData.files && searchData.files.length > 0) {
             const fileId = searchData.files[0].id;
             await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
                 method: 'PATCH',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': mimeType },
                 body: blob
             });
         } else {
@@ -1883,28 +1816,128 @@ document.addEventListener('DOMContentLoaded', () => {
             const folderId = await driveGetCourseFolder(driveAccessToken);
             const cursoActual = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`);
 
-            // Buscar si ya existe un archivo para este curso (con cualquier fecha)
+            // Determinar nombre base (con fecha de primera vez)
             const searchRes = await fetch(
                 `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
                 { headers: { Authorization: `Bearer ${driveAccessToken}` } }
             );
             const searchData = await searchRes.json();
-            let fileName;
-            if (searchData.files && searchData.files.length > 0) {
-                // Ya existe — usar el mismo nombre
-                fileName = searchData.files[0].name;
+            let baseName;
+            const existingJson = searchData.files && searchData.files.find(f => f.name.endsWith('.json'));
+            if (existingJson) {
+                baseName = existingJson.name.replace('.json', '');
             } else {
-                // Primera vez — agregar fecha de hoy
                 const today = new Date();
                 const fecha = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
-                fileName = `rubrica_${cursoActual}_${fecha}.json`;
+                baseName = `rubrica_${cursoActual}_${fecha}`;
             }
 
-            await driveSaveFile(driveAccessToken, folderId, fileName, JSON.stringify(allEvaluations, null, 2));
+            // Guardar JSON (datos para la app)
+            await driveSaveFile(driveAccessToken, folderId, `${baseName}.json`, JSON.stringify(allEvaluations, null, 2));
+
+            // Generar y guardar HTML legible
+            const htmlContent = generarReporteHTML(allEvaluations, cursoActual);
+            await driveSaveFile(driveAccessToken, folderId, `${baseName}.html`, htmlContent, 'text/html');
+
             driveSetStatus(`✅ Sincronizado con Drive (${new Date().toLocaleTimeString('es-CL')})`, '#28a745');
         } catch (err) {
             driveSetStatus('⚠️ No se pudo sincronizar con Drive.', '#e0a800');
         }
+    }
+
+    function generarReporteHTML(evaluaciones, curso) {
+        const fecha = new Date().toLocaleDateString('es-CL', { year:'numeric', month:'long', day:'numeric' });
+
+        let html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte ${curso}</title>
+<style>
+  body { font-family: Georgia, serif; background: #f5f3ee; color: #2c2416; padding: 32px; }
+  h1 { color: #8b6914; font-size: 1.6rem; margin-bottom: 4px; }
+  h2 { color: #b8891e; font-size: 1.1rem; margin: 24px 0 8px 0; border-bottom: 1px solid #e0d9ce; padding-bottom: 4px; }
+  h3 { color: #8b6914; font-size: 1rem; margin: 0 0 6px 0; }
+  .header { border-bottom: 2px solid #c9a84c; padding-bottom: 12px; margin-bottom: 24px; }
+  .clef { font-size: 2.5rem; color: #c9a84c; line-height: 1; }
+  .subtitle { font-size: 12px; color: #8a7d6b; font-style: italic; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; }
+  th { background: #8b6914; color: white; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { border: 1px solid #e0d9ce; padding: 7px 10px; vertical-align: top; }
+  tr:nth-child(even) { background: #faf9f6; }
+  .nota-alta { color: #2d7d4f; font-weight: bold; }
+  .nota-media { color: #b8891e; font-weight: bold; }
+  .nota-baja { color: #c0392b; font-weight: bold; }
+  .medal { font-size: 1.1em; }
+  .eval-block { margin-bottom: 32px; page-break-inside: avoid; }
+  .obs { font-size: 11px; color: #8a7d6b; font-style: italic; }
+  .tag { display: inline-block; background: #f5e9cc; color: #8b6914; border-radius: 4px; padding: 1px 7px; font-size: 10px; margin: 1px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="clef">𝄞</div>
+  <h1>Reporte de Evaluaciones — Educación Musical</h1>
+  <div class="subtitle">Profesor Edison Olguín &nbsp;·&nbsp; ${curso} &nbsp;·&nbsp; Generado el ${fecha}</div>
+</div>`;
+
+        // Una sección por evaluación
+        evaluaciones.forEach(ev => {
+            const evFecha = new Date(ev.date).toLocaleDateString('es-CL');
+            html += `<div class="eval-block">
+            <h2>${ev.title} <span style="font-size:11px; color:#8a7d6b; font-weight:normal;">(${evFecha})</span></h2>
+
+            <!-- Tabla principal: puntajes, notas y observaciones -->
+            <table>
+                <thead><tr>
+                    <th>#</th><th>Estudiante</th>`;
+            ev.indicators.forEach(ind => { html += `<th>${ind}</th>`; });
+            html += `<th>Puntaje</th><th>Nota</th><th>Observación</th>
+                </tr></thead><tbody>`;
+
+            ev.results.forEach((r, i) => {
+                const nota = parseFloat(r.finalGrade);
+                const claseNota = nota >= 6 ? 'nota-alta' : nota >= 4 ? 'nota-media' : 'nota-baja';
+                const ausente = r.status === 'A';
+                html += `<tr>
+                    <td style="text-align:center; color:#8a7d6b;">${i+1}</td>
+                    <td><b>${r.name}</b></td>`;
+                if (ausente) {
+                    html += `<td colspan="${ev.indicators.length + 2}" style="text-align:center; color:#8a7d6b; font-style:italic;">Ausente</td>`;
+                } else {
+                    ev.indicators.forEach(ind => {
+                        const sc = r.scores[ind] !== null ? r.scores[ind] : '—';
+                        const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                        html += `<td style="text-align:center;">${sc}<span style="color:#8a7d6b; font-size:10px;">/${max}</span></td>`;
+                    });
+                    html += `<td style="text-align:center; font-weight:bold;">${r.status || '—'}</td>
+                             <td style="text-align:center;" class="${claseNota}">${r.finalGrade || '—'}</td>`;
+                }
+                html += `<td class="obs">${r.comment || ''}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+
+            // Ranking de esta evaluación
+            const ranked = ev.results
+                .filter(r => r.status !== 'A' && r.finalGrade)
+                .map(r => ({ name: r.name, grade: parseFloat(r.finalGrade), score: r.status }))
+                .sort((a, b) => b.grade - a.grade);
+
+            if (ranked.length > 0) {
+                html += `<h3>🏆 Ranking</h3><table><thead><tr><th>#</th><th>Estudiante</th><th>Puntaje</th><th>Nota</th></tr></thead><tbody>`;
+                ranked.forEach((r, i) => {
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+                    const claseNota = r.grade >= 6 ? 'nota-alta' : r.grade >= 4 ? 'nota-media' : 'nota-baja';
+                    html += `<tr><td style="text-align:center;">${medal}</td><td>${r.name}</td><td style="text-align:center;">${r.score}</td><td style="text-align:center;" class="${claseNota}">${r.grade.toFixed(1)}</td></tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            html += `</div>`;
+        });
+
+        html += `</body></html>`;
+        return html;
     }
 
     // Sobreescribir debouncedSave para incluir sincronización con Drive
