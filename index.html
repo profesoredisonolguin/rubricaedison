@@ -1664,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Google Drive ---
     const DRIVE_CLIENT_ID = '644973578837-vse1u0e7u1c4m6j6pj849phspnlv7t4f.apps.googleusercontent.com';
-    const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+    const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents';
     const DRIVE_FOLDER_NAME = 'Rúbrica Educación Musical';
     const driveStatus = document.getElementById('drive-status');
     const driveConnectButton = document.getElementById('drive-connect-button');
@@ -1815,7 +1815,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const folderId = await driveGetCourseFolder(driveAccessToken);
             const cursoActual = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`);
 
-            // Determinar nombre base (con fecha de primera vez)
+            // Determinar nombre base para el JSON
             const searchRes = await fetch(
                 `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
                 { headers: { Authorization: `Bearer ${driveAccessToken}` } }
@@ -1834,14 +1834,133 @@ document.addEventListener('DOMContentLoaded', () => {
             // Guardar JSON (datos para la app)
             await driveSaveFile(driveAccessToken, folderId, `${baseName}.json`, JSON.stringify(allEvaluations, null, 2));
 
-            // Generar y guardar HTML legible
-            const htmlContent = generarReporteHTML(allEvaluations, cursoActual);
-            await driveSaveFile(driveAccessToken, folderId, `${baseName}.html`, htmlContent, 'text/html');
+            // Crear/actualizar un Google Doc por cada evaluación
+            for (const ev of allEvaluations) {
+                await syncEvaluacionDoc(ev, folderId, cursoActual);
+            }
 
             driveSetStatus(`✅ Sincronizado con Drive (${new Date().toLocaleTimeString('es-CL')})`, '#28a745');
         } catch (err) {
+            console.error(err);
             driveSetStatus('⚠️ No se pudo sincronizar con Drive.', '#e0a800');
         }
+    }
+
+    async function syncEvaluacionDoc(ev, folderId, curso) {
+        const docName = `${ev.title} - ${curso}`;
+
+        // Buscar si ya existe el Doc
+        const searchRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files?q=name='${docName}' and '${folderId}' in parents and trashed=false and mimeType='application/vnd.google-apps.document'&fields=files(id,name)`,
+            { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+        );
+        const searchData = await searchRes.json();
+
+        let docId;
+        if (searchData.files && searchData.files.length > 0) {
+            docId = searchData.files[0].id;
+        } else {
+            // Crear nuevo Doc
+            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${driveAccessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: docName,
+                    mimeType: 'application/vnd.google-apps.document',
+                    parents: [folderId]
+                })
+            });
+            const createData = await createRes.json();
+            docId = createData.id;
+        }
+
+        // Construir contenido del Doc con la API de Docs
+        await actualizarContenidoDoc(docId, ev, curso);
+    }
+
+    async function actualizarContenidoDoc(docId, ev, curso) {
+        // Primero leer el doc para saber cuánto contenido tiene (para borrarlo)
+        const docRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+            headers: { Authorization: `Bearer ${driveAccessToken}` }
+        });
+        const docData = await docRes.json();
+        const endIndex = docData.body.content.reduce((max, el) => {
+            return el.endIndex ? Math.max(max, el.endIndex) : max;
+        }, 1);
+
+        const fecha = new Date(ev.date).toLocaleDateString('es-CL');
+        const actualizacion = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+        // Construir requests para la API de Docs
+        const requests = [];
+
+        // Borrar contenido existente si hay más de 1 caracter
+        if (endIndex > 2) {
+            requests.push({
+                deleteContentRange: {
+                    range: { startIndex: 1, endIndex: endIndex - 1 }
+                }
+            });
+        }
+
+        // Construir texto de la tabla
+        // Encabezado del documento
+        let texto = `Rúbrica de Evaluación — Educación Musical\n`;
+        texto += `Profesor Edison Olguín\n`;
+        texto += `${ev.title} · ${curso} · ${fecha}\n`;
+        texto += `Última actualización: ${actualizacion}\n\n`;
+
+        // Encabezados de tabla
+        const indicadores = ev.indicators || [];
+        let encabezados = `N°\tNombre`;
+        indicadores.forEach(ind => { encabezados += `\t${ind}`; });
+        encabezados += `\tPuntaje\tNota\n`;
+        texto += encabezados;
+
+        // Filas de estudiantes
+        ev.results.forEach((r, i) => {
+            if (r.status === 'A') {
+                let fila = `${i+1}\t${r.name}`;
+                indicadores.forEach(() => { fila += `\t—`; });
+                fila += `\tAusente\t—\n`;
+                texto += fila;
+            } else {
+                let fila = `${i+1}\t${r.name}`;
+                indicadores.forEach(ind => {
+                    const score = r.scores[ind] !== null && r.scores[ind] !== undefined ? r.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    fila += `\t${score}/${max}`;
+                });
+                fila += `\t${r.status || '—'}\t${r.finalGrade || '—'}\n`;
+                texto += fila;
+            }
+        });
+
+        requests.push({
+            insertText: { location: { index: 1 }, text: texto }
+        });
+
+        // Aplicar formato al título (negrita, grande)
+        const tituloEnd = `Rúbrica de Evaluación — Educación Musical\n`.length + 1;
+        requests.push({
+            updateTextStyle: {
+                range: { startIndex: 1, endIndex: tituloEnd },
+                textStyle: { bold: true, fontSize: { magnitude: 16, unit: 'PT' }, foregroundColor: { color: { rgbColor: { red: 0.545, green: 0.412, blue: 0.078 } } } },
+                fields: 'bold,fontSize,foregroundColor'
+            }
+        });
+
+        await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${driveAccessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ requests })
+        });
     }
 
     function generarReporteHTML(evaluaciones, curso) {
