@@ -1106,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     backFromApoderadoButton.addEventListener('click', () => {
         apoderadoView.style.display = 'none';
         mainView.style.display = 'block';
-        document.body.classList.remove('modo-apoderado');
+        // No quitar modo-apoderado — solo el profesor conectado a Drive puede verlo
     });
 
     function formatRut(rut) {
