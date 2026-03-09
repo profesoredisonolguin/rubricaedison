@@ -1098,7 +1098,10 @@ document.addEventListener('DOMContentLoaded', () => {
         mainView.style.display = 'none';
         historyView.style.display = 'none';
         apoderadoView.style.display = 'block';
-        document.body.classList.add('modo-apoderado');
+        // Solo agregar modo-apoderado si NO es profesor (sin Drive)
+        if (!driveAccessToken) {
+            document.body.classList.add('modo-apoderado');
+        }
         rutInput.value = '';
         rutError.style.display = 'none';
         apoderadoResults.innerHTML = '';
@@ -1106,7 +1109,10 @@ document.addEventListener('DOMContentLoaded', () => {
     backFromApoderadoButton.addEventListener('click', () => {
         apoderadoView.style.display = 'none';
         mainView.style.display = 'block';
-        // No quitar modo-apoderado — solo el profesor conectado a Drive puede verlo
+        // Si es profesor, asegurar que modo-apoderado esté quitado
+        if (driveAccessToken) {
+            document.body.classList.remove('modo-apoderado');
+        }
     });
 
     function formatRut(rut) {
@@ -1995,12 +2001,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function driveGetCourseFolder(token) {
         // Carpeta raíz: "Educación Musical LBO"
         const rootId = await driveGetOrCreateFolder(token, 'Educación Musical LBO');
-        // Subcarpeta del curso: "Educación Musical Tercero A"
+        // Subcarpeta del curso: ej. "Séptimo A"
         const cursoNombre = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`)
             .replace('_', ' ')
             .replace(/\b\w/g, l => l.toUpperCase());
-        const subFolderName = cursoNombre;
-        const subFolderId = await driveGetOrCreateFolder(token, subFolderName, rootId);
+        const subFolderId = await driveGetOrCreateFolder(token, cursoNombre, rootId);
         return subFolderId;
     }
 
@@ -2116,61 +2121,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function actualizarContenidoDoc(docId, ev, curso) {
+        const fecha = new Date(ev.date).toLocaleDateString('es-CL');
+        const actualizacion = new Date().toLocaleString('es-CL');
+        const indicadores = ev.indicators || [];
+        const estudiantes = ev.results || [];
+        const nCols = 2 + indicadores.length + 2; // N° + Nombre + indicadores + Puntaje + Nota
+
+        // Leer doc para borrar contenido anterior
         const docRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
             headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
         const docData = await docRes.json();
-        const endIndex = docData.body.content.reduce((max, el) => {
-            return el.endIndex ? Math.max(max, el.endIndex) : max;
-        }, 1);
-
-        const fecha = new Date(ev.date).toLocaleDateString('es-CL');
-        const actualizacion = new Date().toLocaleString('es-CL');
-        const indicadores = ev.indicators || [];
+        const endIndex = docData.body.content.reduce((max, el) => el.endIndex ? Math.max(max, el.endIndex) : max, 1);
 
         const requests = [];
 
-        // Borrar contenido existente
+        // 1. Borrar contenido existente
         if (endIndex > 2) {
-            requests.push({
-                deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } }
-            });
+            requests.push({ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } });
         }
 
-        // Título y encabezado
-        let texto = `Rúbrica de Evaluación — Educación Musical\n`;
-        texto += `Profesor Edison Olguín · ${curso} · ${fecha}\n`;
-        texto += `Última actualización: ${actualizacion}\n\n`;
+        // 2. Insertar encabezado
+        const encabezado = `${ev.title}\nProfesor Edison Olguín · ${curso} · ${fecha}\nActualizado: ${actualizacion}\n`;
+        requests.push({ insertText: { location: { index: 1 }, text: encabezado } });
 
-        // Encabezados de tabla como texto tabulado
-        texto += `N°\tEstudiante`;
-        indicadores.forEach(ind => { texto += `\t${ind}`; });
-        texto += `\tPuntaje\tNota\n`;
-
-        // Filas
-        ev.results.forEach((r, i) => {
-            if (r.status === 'A') {
-                texto += `${i+1}\t${r.name}`;
-                indicadores.forEach(() => { texto += `\t—`; });
-                texto += `\tAusente\t—\n`;
-            } else {
-                texto += `${i+1}\t${r.name}`;
-                indicadores.forEach(ind => {
-                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
-                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
-                    texto += `\t${sc}/${max}`;
-                });
-                texto += `\t${r.status || '—'}\t${r.finalGrade || '—'}\n`;
-            }
-        });
-
-        requests.push({ insertText: { location: { index: 1 }, text: texto } });
-
-        // Formato del título
-        const tituloLen = `Rúbrica de Evaluación — Educación Musical\n`.length;
+        // 3. Formato encabezado
         requests.push({
             updateTextStyle: {
-                range: { startIndex: 1, endIndex: tituloLen + 1 },
+                range: { startIndex: 1, endIndex: ev.title.length + 1 },
                 textStyle: {
                     bold: true,
                     fontSize: { magnitude: 16, unit: 'PT' },
@@ -2180,11 +2158,107 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Aplicar primero el batch del encabezado
         await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ requests })
         });
+
+        // 4. Insertar tabla (requiere saber el índice actual)
+        const docRes2 = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+            headers: { Authorization: `Bearer ${driveAccessToken}` }
+        });
+        const docData2 = await docRes2.json();
+        const insertIndex = docData2.body.content.reduce((max, el) => el.endIndex ? Math.max(max, el.endIndex) : max, 1) - 1;
+
+        const nRows = 1 + estudiantes.length; // encabezado + estudiantes
+
+        const tableRequests = [];
+
+        // Insertar tabla
+        tableRequests.push({
+            insertTable: {
+                rows: nRows,
+                columns: nCols,
+                location: { index: insertIndex }
+            }
+        });
+
+        await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests: tableRequests })
+        });
+
+        // 5. Rellenar celdas de la tabla
+        const docRes3 = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+            headers: { Authorization: `Bearer ${driveAccessToken}` }
+        });
+        const docData3 = await docRes3.json();
+
+        // Encontrar la tabla en el documento
+        const tableElement = docData3.body.content.find(el => el.table);
+        if (!tableElement) return;
+
+        const fillRequests = [];
+
+        // Construir datos de la tabla
+        const headers = ['N°', 'Nombre', ...indicadores, 'Puntaje', 'Nota'];
+        const rows = [headers];
+
+        estudiantes.forEach((r, i) => {
+            if (r.status === 'A') {
+                rows.push([String(i+1), r.name, ...indicadores.map(() => '—'), 'Ausente', '—']);
+            } else {
+                const scores = indicadores.map(ind => {
+                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    return `${sc}/${max}`;
+                });
+                rows.push([String(i+1), r.name, ...scores, String(r.status || '—'), String(r.finalGrade || '—')]);
+            }
+        });
+
+        // Rellenar cada celda
+        tableElement.table.tableRows.forEach((row, rowIdx) => {
+            row.tableCells.forEach((cell, colIdx) => {
+                const cellText = (rows[rowIdx] && rows[rowIdx][colIdx]) ? rows[rowIdx][colIdx] : '';
+                const cellIndex = cell.content[0].startIndex;
+                fillRequests.push({
+                    insertText: { location: { index: cellIndex }, text: cellText }
+                });
+                // Negrita en fila de encabezado
+                if (rowIdx === 0) {
+                    fillRequests.push({
+                        updateTextStyle: {
+                            range: { startIndex: cellIndex, endIndex: cellIndex + cellText.length },
+                            textStyle: { bold: true, foregroundColor: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } } },
+                            fields: 'bold,foregroundColor'
+                        }
+                    });
+                    fillRequests.push({
+                        updateTableCellStyle: {
+                            tableStartLocation: { index: tableElement.startIndex },
+                            rowIndex: rowIdx,
+                            columnIndex: colIdx,
+                            tableCellStyle: {
+                                backgroundColor: { color: { rgbColor: { red: 0.545, green: 0.412, blue: 0.078 } } }
+                            },
+                            fields: 'backgroundColor'
+                        }
+                    });
+                }
+            });
+        });
+
+        if (fillRequests.length > 0) {
+            await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requests: fillRequests })
+            });
+        }
     }
 
     function generarHTMLEvaluacion(ev, curso) {
