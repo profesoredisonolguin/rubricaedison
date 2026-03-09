@@ -48,6 +48,7 @@
             padding: 28px;
             margin-bottom: 24px;
             box-shadow: 0 4px 24px rgba(139,105,20,0.08);
+        body.modo-apoderado .profesor-only { display: none !important; }
         }
 
         h1 {
@@ -266,7 +267,8 @@
                 <div style="margin-top: 6px; font-size: 13px; color: #b8891e; font-family: 'DM Sans', sans-serif; letter-spacing: 0.08em; font-style: italic;">Profesor Edison Olguín</div>
             </div>
             <div style="width: 120px; text-align: right;">
-                <button id="view-history-button">📊 Historial</button>
+                <button id="view-history-button" class="profesor-only">📊 Historial</button><br>
+                <button id="view-apoderado-button" style="margin-top:6px; font-family:'DM Sans',sans-serif; font-size:12px; padding:6px 12px; background:var(--teal-light); color:var(--teal); border:1px solid var(--teal); border-radius:20px; cursor:pointer; transition:all 0.2s;">👨‍👩‍👧 Apoderados</button>
             </div>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 0 4px;">
@@ -275,10 +277,10 @@
             <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, #c9a84c);"></div>
         </div>
 
-        <button id="student-data-toggle-button">Mostrar/Ocultar Editor de Estudiantes</button>
-        <div id="student-data-editor" class="rubrica-section">
+        <button id="student-data-toggle-button" class="profesor-only">Mostrar/Ocultar Editor de Estudiantes</button>
+        <div id="student-data-editor" class="rubrica-section profesor-only">
             <h2>Editar Lista de Estudiantes</h2>
-            <p>Aquí puedes modificar la lista de estudiantes. Los cambios se guardarán en tu navegador.</p>
+            <p>Puedes agregar el RUT de cada estudiante usando el formato <code>NOMBRE APELLIDO|RUT</code> (por ejemplo: <code>JUAN PÉREZ GONZÁLEZ|12345678-9</code>). El RUT es necesario para el Portal de Apoderados. Si no se agrega RUT, el nombre funciona igual para las rúbricas.</p>
             <textarea id="student-data-textarea"></textarea>
             <div class="editor-buttons">
                 <button id="save-student-data-button">Guardar Cambios</button>
@@ -286,8 +288,8 @@
             </div>
         </div>
 
-        <button id="indicators-toggle-button" style="display: block; margin: 10px auto; padding: 8px 15px; font-size: 14px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px;">Mostrar/Ocultar Editor de Indicadores</button>
-        <div id="indicators-editor" class="rubrica-section" style="display: none;">
+        <button id="indicators-toggle-button" class="profesor-only" style="display: block; margin: 10px auto; padding: 8px 15px; font-size: 14px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px;">Mostrar/Ocultar Editor de Indicadores</button>
+        <div id="indicators-editor" class="rubrica-section profesor-only" style="display: none;">
             <h2 style="color: #007bff; margin-top: 0;">Editar Indicadores y Descriptores</h2>
             <p>Edita directamente el nombre y los descriptores de cada indicador. Los cambios se guardan en tu navegador.</p>
             <div style="overflow-x: auto;">
@@ -315,12 +317,15 @@
             </div>
         </div>
 
-        <div style="text-align: right; padding: 5px 0 10px 0;">
+        <div class="profesor-only" style="text-align: right; padding: 5px 0 10px 0;">
             <button id="drive-connect-button" style="padding: 5px 10px; font-size: 13px; cursor: pointer; background-color: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px;">☁ Conectar con Google Drive</button>
             <div id="drive-status" style="margin-top: 5px; font-size: 12px; color: #888;"></div>
         </div>
+        <div id="acceso-profesor-div" style="text-align: right; padding: 5px 0 10px 0;">
+            <button id="acceso-profesor-button" style="padding: 5px 10px; font-size: 12px; cursor: pointer; background-color: transparent; color: #ccc; border: 1px solid #eee; border-radius: 4px;">☁ Acceso Profesor</button>
+        </div>
 
-        <div id="descriptor-selection-container" class="rubrica-section">
+        <div id="descriptor-selection-container" class="rubrica-section profesor-only">
             <h2>Selecciona los indicadores</h2>
             <p>Haz clic en el puntaje máximo para cada indicador que desees incluir.</p>
             <table class="descriptor-table" id="descriptor-table">
@@ -329,7 +334,7 @@
             </table>
         </div>
 
-        <div id="rubrica-generacion-controls" class="rubrica-section">
+        <div id="rubrica-generacion-controls" class="rubrica-section profesor-only">
             <div style="margin-bottom: 15px;">
                 <label for="evaluation-title" style="font-weight: bold;">Título de la Evaluación:</label>
                 <input type="text" id="evaluation-title" placeholder="Ej: Unidad 2 - Canto Grupal" style="width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px;">
@@ -360,7 +365,7 @@
             <input type="text" id="student-search-input" placeholder="🔍 Buscar estudiante..." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;">
         </div>
 
-        <div id="analysis-buttons-container" style="text-align: center; margin-top: 20px; display: none;">
+        <div id="analysis-buttons-container" class="profesor-only" style="text-align: center; margin-top: 20px; display: none;">
             <button id="analyze-indicators-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px; margin-right: 10px;">Ver Análisis por Indicador</button>
             <button id="analyze-summary-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #17a2b8; color: white; border: none; border-radius: 5px;">Ver Resumen de Calificaciones</button>
             <button id="ranking-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #8b6914; color: white; border: none; border-radius: 5px; margin-left: 10px;">🏆 Ranking del Curso</button>
@@ -431,6 +436,23 @@
             <button class="chart-type-btn" data-type="bar">📊 Barras</button>
             <button class="chart-type-btn" data-type="scatter">⚬ Dispersión</button>
         </div>
+    </div>
+
+    <!-- Portal Apoderado -->
+    <div id="apoderado-view" class="history-section" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h2 style="margin:0; color:var(--teal);">👨‍👩‍👧 Portal Apoderado</h2>
+            <button id="back-from-apoderado-button" style="padding:7px 16px; font-family:'DM Sans',sans-serif; font-size:13px; background:var(--surface2); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; cursor:pointer;">← Volver</button>
+        </div>
+        <div style="max-width:420px; margin:0 auto; text-align:center;">
+            <p style="margin-bottom:20px;">Ingresa el RUT del estudiante para ver sus evaluaciones.</p>
+            <div style="display:flex; gap:10px; margin-bottom:8px;">
+                <input type="text" id="rut-input" placeholder="Ej: 12345678-9" style="flex:1; padding:12px 14px; border:2px solid var(--border); border-radius:10px; font-size:15px; font-family:'DM Sans',sans-serif;">
+                <button id="rut-buscar-button" style="padding:12px 20px; background:var(--teal); color:white; border:none; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; cursor:pointer;">Buscar</button>
+            </div>
+            <p id="rut-error" style="color:var(--red); font-size:13px; display:none;">RUT no encontrado. Verifica el número ingresado.</p>
+        </div>
+        <div id="apoderado-results" style="margin-top:24px;"></div>
     </div>
 </div>
 
@@ -545,11 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const courseKey in data) {
             if (Array.isArray(data[courseKey])) {
                 processedData[courseKey] = data[courseKey].sort((a, b) => {
+                    // Extraer solo el nombre (ignorar RUT si existe)
+                    const nameA = a.split('|')[0].trim();
+                    const nameB = b.split('|')[0].trim();
                     const getFirstLastName = name => {
                         const words = name.trim().split(" ");
                         return words.length > 2 ? words[words.length - 2] || "" : words[words.length - 1] || "";
                     };
-                    return getFirstLastName(a).localeCompare(getFirstLastName(b));
+                    return getFirstLastName(nameA).localeCompare(getFirstLastName(nameB));
                 });
             }
         }
@@ -763,7 +788,8 @@ document.addEventListener('DOMContentLoaded', () => {
         headerHTML += `<th class="total-score-header">Puntaje</th><th class="final-grade-header">Nota</th>`;
 
         let bodyHTML = students.map(student => {
-            let cells = `<td data-label="Aus."><input type="checkbox" class="absent-checkbox"></td><td data-label="Nombre">${student}</td>`;
+            const studentName = student.split('|')[0].trim();
+            let cells = `<td data-label="Aus."><input type="checkbox" class="absent-checkbox"></td><td data-label="Nombre">${studentName}</td>`;
             selectedIndicators.forEach(row => {
                 const indicator = row.dataset.indicator;
                 const maxScore = row.querySelector(".score-button.selected").dataset.score;
@@ -1050,11 +1076,209 @@ document.addEventListener('DOMContentLoaded', () => {
     viewHistoryButton.addEventListener("click", () => {
         mainView.style.display = 'none';
         historyView.style.display = 'block';
+        apoderadoView.style.display = 'none';
         populateHistoryFilters();
     });
     backToRubricButton.addEventListener("click", () => {
         historyView.style.display = 'none';
         mainView.style.display = 'block';
+    });
+
+    // Portal Apoderado
+    const apoderadoView = document.getElementById('apoderado-view');
+    const viewApoderadoButton = document.getElementById('view-apoderado-button');
+    const backFromApoderadoButton = document.getElementById('back-from-apoderado-button');
+    const rutInput = document.getElementById('rut-input');
+    const rutBuscarButton = document.getElementById('rut-buscar-button');
+    const rutError = document.getElementById('rut-error');
+    const apoderadoResults = document.getElementById('apoderado-results');
+
+    viewApoderadoButton.addEventListener('click', () => {
+        mainView.style.display = 'none';
+        historyView.style.display = 'none';
+        apoderadoView.style.display = 'block';
+        document.body.classList.add('modo-apoderado');
+        rutInput.value = '';
+        rutError.style.display = 'none';
+        apoderadoResults.innerHTML = '';
+    });
+    backFromApoderadoButton.addEventListener('click', () => {
+        apoderadoView.style.display = 'none';
+        mainView.style.display = 'block';
+        document.body.classList.remove('modo-apoderado');
+    });
+
+    function formatRut(rut) {
+        return rut.replace(/[^0-9kK\-]/g, '').toUpperCase();
+    }
+
+    rutInput.addEventListener('input', () => {
+        rutInput.value = formatRut(rutInput.value);
+    });
+    rutInput.addEventListener('keydown', e => { if (e.key === 'Enter') rutBuscarButton.click(); });
+
+    rutBuscarButton.addEventListener('click', () => {
+        const rut = rutInput.value.trim().toUpperCase();
+        if (!rut) return;
+        rutError.style.display = 'none';
+        apoderadoResults.innerHTML = '';
+
+        // Buscar el RUT en los datos de estudiantes (formato "NOMBRE|RUT")
+        const studentData = JSON.parse(localStorage.getItem('customStudentData')) || ORIGINAL_ALL_STUDENTS_DATA;
+        let foundName = null, foundCourse = null;
+
+        for (const courseKey in studentData) {
+            for (const entry of studentData[courseKey]) {
+                const parts = entry.split('|');
+                const entryRut = parts[1] ? parts[1].trim().toUpperCase() : '';
+                if (entryRut === rut) {
+                    foundName = parts[0].trim();
+                    foundCourse = courseKey;
+                    break;
+                }
+            }
+            if (foundName) break;
+        }
+
+        if (!foundName) {
+            rutError.style.display = 'block';
+            return;
+        }
+
+        // Buscar evaluaciones del estudiante
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const cursoCodigo = foundCourse; // ej: "7A"
+        const evsDelCurso = allEvaluations.filter(ev => {
+            const code = ev.course ? ev.course.replace(/[°\s]/g,'').toUpperCase() : '';
+            return code === cursoCodigo.toUpperCase() || ev.course === cursoCodigo;
+        });
+
+        const evsConEstudiante = evsDelCurso.map(ev => {
+            const result = ev.results ? ev.results.find(r => r.name && r.name.toUpperCase() === foundName.toUpperCase()) : null;
+            return { ev, result };
+        }).filter(x => x.result && x.result.status !== 'A');
+
+        if (evsConEstudiante.length === 0) {
+            apoderadoResults.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px;">
+                <div style="font-size:2rem;">📋</div>
+                <p>Estudiante encontrado: <b>${foundName}</b> (${cursoCodigo})</p>
+                <p>Aún no hay evaluaciones registradas.</p>
+            </div>`;
+            return;
+        }
+
+        // Construir HTML de resultados
+        let html = `<div style="border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:20px;">
+            <div style="background:var(--teal); color:white; padding:16px 20px;">
+                <div style="font-size:1.2rem; font-weight:700;">🎵 ${foundName}</div>
+                <div style="font-size:13px; opacity:0.85; margin-top:2px;">${cursoCodigo} · Educación Musical</div>
+            </div>`;
+
+        // Resumen de notas
+        html += `<div style="padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface2);">
+            <div style="font-weight:600; margin-bottom:10px; color:var(--accent);">📊 Resumen de Evaluaciones</div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">`;
+
+        evsConEstudiante.forEach(({ev, result}) => {
+            const nota = parseFloat(result.finalGrade);
+            const color = nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+            const bg = nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
+            html += `<div style="background:${bg}; border:1px solid ${color}30; border-radius:10px; padding:10px 14px; min-width:130px;">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">${new Date(ev.date).toLocaleDateString('es-CL')}</div>
+                <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${ev.title}</div>
+                <div style="font-size:1.4rem; font-weight:700; color:${color};">${result.finalGrade}</div>
+            </div>`;
+        });
+        html += `</div></div>`;
+
+        // Detalle por evaluación
+        evsConEstudiante.forEach(({ev, result}) => {
+            const indicadores = ev.indicators || [];
+            const nota = parseFloat(result.finalGrade);
+            const color = nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+
+            html += `<div style="padding:16px 20px; border-bottom:1px solid var(--border);">
+                <div style="font-weight:600; margin-bottom:10px;">${ev.title} <span style="font-size:12px; color:var(--text-muted);">· ${new Date(ev.date).toLocaleDateString('es-CL')}</span></div>`;
+
+            // Puntaje por indicador
+            if (indicadores.length > 0) {
+                html += `<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">`;
+                indicadores.forEach(ind => {
+                    const sc = result.scores && result.scores[ind] !== null && result.scores[ind] !== undefined ? result.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    const pct = sc !== '—' ? (sc/max)*100 : 0;
+                    const barColor = pct >= 75 ? '#2d7d4f' : pct >= 50 ? '#b8891e' : '#c0392b';
+                    html += `<div style="flex:1; min-width:140px; background:var(--surface2); border-radius:8px; padding:8px 10px;">
+                        <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">${ind}</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="flex:1; background:#e0d9ce; border-radius:4px; height:6px;">
+                                <div style="width:${pct}%; background:${barColor}; height:6px; border-radius:4px;"></div>
+                            </div>
+                            <span style="font-size:12px; font-weight:600; color:${barColor};">${sc}/${max}</span>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Nota final
+            html += `<div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="font-size:13px; color:var(--text-muted);">Nota final:</span>
+                <span style="font-size:1.3rem; font-weight:700; color:${color};">${result.finalGrade}</span>
+                <span style="font-size:12px; color:var(--text-muted);">· Puntaje: ${result.status}</span>
+            </div>`;
+
+            // Observación
+            if (result.observation && result.observation.trim()) {
+                html += `<div style="background:#f5e9cc; border-left:3px solid #c9a84c; border-radius:0 8px 8px 0; padding:10px 14px; font-size:13px; color:#5a4a2f;">
+                    <span style="font-weight:600;">💬 Observación del profesor:</span><br>${result.observation}
+                </div>`;
+            }
+            html += `</div>`;
+        });
+
+        // Gráfico de progreso
+        const chartId = 'apoderado-chart-' + Date.now();
+        html += `<div style="padding:16px 20px;">
+            <div style="font-weight:600; margin-bottom:10px; color:var(--accent);">📈 Progreso</div>
+            <canvas id="${chartId}" height="160"></canvas>
+        </div>`;
+
+        html += `</div>`;
+        apoderadoResults.innerHTML = html;
+
+        // Renderizar gráfico
+        const labels = evsConEstudiante.map(({ev}) => ev.title);
+        const notas = evsConEstudiante.map(({result}) => parseFloat(result.finalGrade));
+        const ctx = document.getElementById(chartId).getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Nota',
+                    data: notas,
+                    borderColor: '#8b6914',
+                    backgroundColor: 'rgba(139,105,20,0.1)',
+                    pointBackgroundColor: notas.map(n => n >= 6 ? '#2d7d4f' : n >= 4 ? '#b8891e' : '#c0392b'),
+                    pointRadius: 6,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                scales: {
+                    y: { min: 1, max: 7, ticks: { stepSize: 1 }, grid: { color: '#e0d9ce' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: { label: ctx => `Nota: ${ctx.raw}` }
+                    }
+                }
+            }
+        });
     });
     historyCourseSelect.addEventListener("change", () => { populateHistoryStudents(); renderHistoryChart(); });
     historyIndicatorSelect.addEventListener("change", () => { populateHistoryStudents(); renderHistoryChart(); });
@@ -1672,11 +1896,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let driveTokenClient = null;
     let driveFolderId = null;
 
+    // Al cargar la página, activar modo apoderado por defecto
+    document.body.classList.add('modo-apoderado');
+
+    // Botón discreto de acceso profesor
+    document.getElementById('acceso-profesor-button').addEventListener('click', () => {
+        document.getElementById('acceso-profesor-div').style.display = 'none';
+        document.getElementById('drive-connect-button').click();
+    });
+
+    function activarModoProfesor() {
+        document.body.classList.remove('modo-apoderado');
+    }
+
     function driveSetStatus(msg, color = '#888') {
         driveStatus.style.color = color;
         driveStatus.textContent = msg;
     }
-
     // Inicializar el cliente OAuth al cargar la página
     window.addEventListener('load', () => {
         if (typeof google === 'undefined') return;
@@ -1693,6 +1929,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 driveConnectButton.style.color = '#28a745';
                 driveConnectButton.style.borderColor = '#28a745';
                 driveConnectButton.disabled = true;
+                // Activar modo profesor
+                activarModoProfesor();
                 // Habilitar botón generar rúbrica
                 const generateBtn = document.getElementById('generate-button');
                 generateBtn.disabled = false;
