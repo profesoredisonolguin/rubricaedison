@@ -1817,7 +1817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Determinar nombre base para el JSON
             const searchRes = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false&fields=files(id,name)`,
+                `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false and mimeType='application/json'&fields=files(id,name)`,
                 { headers: { Authorization: `Bearer ${driveAccessToken}` } }
             );
             const searchData = await searchRes.json();
@@ -1860,13 +1860,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchData.files && searchData.files.length > 0) {
             docId = searchData.files[0].id;
         } else {
-            // Crear nuevo Doc
             const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
                 method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${driveAccessToken}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: docName,
                     mimeType: 'application/vnd.google-apps.document',
@@ -1877,12 +1873,10 @@ document.addEventListener('DOMContentLoaded', () => {
             docId = createData.id;
         }
 
-        // Construir contenido del Doc con la API de Docs
         await actualizarContenidoDoc(docId, ev, curso);
     }
 
     async function actualizarContenidoDoc(docId, ev, curso) {
-        // Primero leer el doc para saber cuánto contenido tiene (para borrarlo)
         const docRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
             headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
@@ -1892,75 +1886,150 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1);
 
         const fecha = new Date(ev.date).toLocaleDateString('es-CL');
-        const actualizacion = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        const actualizacion = new Date().toLocaleString('es-CL');
+        const indicadores = ev.indicators || [];
 
-        // Construir requests para la API de Docs
         const requests = [];
 
-        // Borrar contenido existente si hay más de 1 caracter
+        // Borrar contenido existente
         if (endIndex > 2) {
             requests.push({
-                deleteContentRange: {
-                    range: { startIndex: 1, endIndex: endIndex - 1 }
-                }
+                deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } }
             });
         }
 
-        // Construir texto de la tabla
-        // Encabezado del documento
+        // Título y encabezado
         let texto = `Rúbrica de Evaluación — Educación Musical\n`;
-        texto += `Profesor Edison Olguín\n`;
-        texto += `${ev.title} · ${curso} · ${fecha}\n`;
+        texto += `Profesor Edison Olguín · ${curso} · ${fecha}\n`;
         texto += `Última actualización: ${actualizacion}\n\n`;
 
-        // Encabezados de tabla
-        const indicadores = ev.indicators || [];
-        let encabezados = `N°\tNombre`;
-        indicadores.forEach(ind => { encabezados += `\t${ind}`; });
-        encabezados += `\tPuntaje\tNota\n`;
-        texto += encabezados;
+        // Encabezados de tabla como texto tabulado
+        texto += `N°\tEstudiante`;
+        indicadores.forEach(ind => { texto += `\t${ind}`; });
+        texto += `\tPuntaje\tNota\n`;
 
-        // Filas de estudiantes
+        // Filas
         ev.results.forEach((r, i) => {
             if (r.status === 'A') {
-                let fila = `${i+1}\t${r.name}`;
-                indicadores.forEach(() => { fila += `\t—`; });
-                fila += `\tAusente\t—\n`;
-                texto += fila;
+                texto += `${i+1}\t${r.name}`;
+                indicadores.forEach(() => { texto += `\t—`; });
+                texto += `\tAusente\t—\n`;
             } else {
-                let fila = `${i+1}\t${r.name}`;
+                texto += `${i+1}\t${r.name}`;
                 indicadores.forEach(ind => {
-                    const score = r.scores[ind] !== null && r.scores[ind] !== undefined ? r.scores[ind] : '—';
+                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
                     const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
-                    fila += `\t${score}/${max}`;
+                    texto += `\t${sc}/${max}`;
                 });
-                fila += `\t${r.status || '—'}\t${r.finalGrade || '—'}\n`;
-                texto += fila;
+                texto += `\t${r.status || '—'}\t${r.finalGrade || '—'}\n`;
             }
         });
 
-        requests.push({
-            insertText: { location: { index: 1 }, text: texto }
-        });
+        requests.push({ insertText: { location: { index: 1 }, text: texto } });
 
-        // Aplicar formato al título (negrita, grande)
-        const tituloEnd = `Rúbrica de Evaluación — Educación Musical\n`.length + 1;
+        // Formato del título
+        const tituloLen = `Rúbrica de Evaluación — Educación Musical\n`.length;
         requests.push({
             updateTextStyle: {
-                range: { startIndex: 1, endIndex: tituloEnd },
-                textStyle: { bold: true, fontSize: { magnitude: 16, unit: 'PT' }, foregroundColor: { color: { rgbColor: { red: 0.545, green: 0.412, blue: 0.078 } } } },
+                range: { startIndex: 1, endIndex: tituloLen + 1 },
+                textStyle: {
+                    bold: true,
+                    fontSize: { magnitude: 16, unit: 'PT' },
+                    foregroundColor: { color: { rgbColor: { red: 0.545, green: 0.412, blue: 0.078 } } }
+                },
                 fields: 'bold,fontSize,foregroundColor'
             }
         });
 
         await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
             method: 'POST',
-            headers: {
-                Authorization: `Bearer ${driveAccessToken}`,
-                'Content-Type': 'application/json'
-            },
+            headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ requests })
         });
+    }
+
+    function generarHTMLEvaluacion(ev, curso) {
+        const fecha = new Date(ev.date).toLocaleDateString('es-CL');
+        const actualizacion = new Date().toLocaleString('es-CL');
+        const indicadores = ev.indicators || [];
+
+        let thIndicadores = indicadores.map(ind => `<th>${ind}</th>`).join('');
+
+        let filas = ev.results.map((r, i) => {
+            if (r.status === 'A') {
+                return `<tr class="ausente">
+                    <td>${i+1}</td>
+                    <td>${r.name}</td>
+                    ${indicadores.map(() => '<td>—</td>').join('')}
+                    <td>Ausente</td>
+                    <td>—</td>
+                </tr>`;
+            }
+            const nota = parseFloat(r.finalGrade);
+            const claseNota = nota >= 6 ? 'alta' : nota >= 4 ? 'media' : 'baja';
+            return `<tr>
+                <td>${i+1}</td>
+                <td><b>${r.name}</b></td>
+                ${indicadores.map(ind => {
+                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    return `<td>${sc}<span class="max">/${max}</span></td>`;
+                }).join('')}
+                <td><b>${r.status || '—'}</b></td>
+                <td class="${claseNota}"><b>${r.finalGrade || '—'}</b></td>
+            </tr>`;
+        }).join('');
+
+        return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>${ev.title} — ${curso}</title>
+<style>
+  @media print { .no-print { display: none; } body { padding: 10px; } }
+  body { font-family: Georgia, serif; background: #f5f3ee; color: #2c2416; padding: 28px; max-width: 900px; margin: auto; }
+  .header { border-bottom: 2px solid #c9a84c; padding-bottom: 10px; margin-bottom: 20px; }
+  .clef { font-size: 2rem; color: #c9a84c; line-height: 1; }
+  h1 { color: #8b6914; font-size: 1.4rem; margin: 4px 0; }
+  .meta { font-size: 12px; color: #8a7d6b; font-style: italic; margin-top: 4px; }
+  .update { font-size: 11px; color: #b8891e; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 16px; }
+  th { background: #8b6914; color: white; padding: 8px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td { border: 1px solid #e0d9ce; padding: 7px 10px; }
+  tr:nth-child(even) { background: #faf9f6; }
+  tr:hover { background: #f5e9cc; }
+  .ausente td { color: #8a7d6b; font-style: italic; background: #faf9f6; }
+  .max { color: #b8891e; font-size: 10px; }
+  .alta { color: #2d7d4f; }
+  .media { color: #b8891e; }
+  .baja { color: #c0392b; }
+  .print-btn { margin-top: 16px; padding: 8px 20px; background: #8b6914; color: white; border: none; border-radius: 20px; font-size: 13px; cursor: pointer; font-family: Georgia, serif; }
+  .print-btn:hover { background: #b8891e; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="clef">𝄞</div>
+  <h1>${ev.title}</h1>
+  <div class="meta">Profesor Edison Olguín &nbsp;·&nbsp; ${curso} &nbsp;·&nbsp; ${fecha}</div>
+  <div class="update">Última actualización: ${actualizacion}</div>
+</div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Estudiante</th>
+      ${thIndicadores}
+      <th>Puntaje</th>
+      <th>Nota</th>
+    </tr>
+  </thead>
+  <tbody>${filas}</tbody>
+</table>
+<div class="meta no-print" style="margin-top:16px;">Generado automáticamente por Rúbrica Educación Musical</div>
+</body>
+</html>`;
     }
 
     function generarReporteHTML(evaluaciones, curso) {
