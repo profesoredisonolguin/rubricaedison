@@ -1378,15 +1378,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         row.querySelector('.absent-checkbox').click();
                     } else {
                         for (const indicatorName in studentData.scores) {
-                            const score = studentData.scores[indicatorName];
-                            if (score !== null) {
-                                const cell = row.querySelector(`td[data-indicador='${indicatorName}']`);
-                                if (cell) {
-                                    const scoreButton = cell.querySelector(`.score-button[data-score='${score}']`);
-                                    if (scoreButton) scoreButton.classList.add('selected');
+                                const score = studentData.scores[indicatorName];
+                                if (score !== null) {
+                                    const cell = row.querySelector(`td[data-indicador='${indicatorName}']`);
+                                    if (cell) {
+                                        const scoreButton = cell.querySelector(`.score-button[data-score='${score}']`);
+                                        if (scoreButton) scoreButton.click();
+                                    }
                                 }
                             }
-                        }
                         calculateStudentScores(row);
                         // Restaurar comentario
                         const commentArea = row.querySelector('.student-comment');
@@ -2056,31 +2056,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
         if (allEvaluations.length === 0) return;
         try {
-            const folderId = await driveGetCourseFolder(driveAccessToken);
-            const cursoActual = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`);
-
-            // Determinar nombre base para el JSON
-            const searchRes = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_${cursoActual}' and '${folderId}' in parents and trashed=false and mimeType='application/json'&fields=files(id,name)`,
-                { headers: { Authorization: `Bearer ${driveAccessToken}` } }
-            );
-            const searchData = await searchRes.json();
-            let baseName;
-            const existingJson = searchData.files && searchData.files.find(f => f.name.endsWith('.json'));
-            if (existingJson) {
-                baseName = existingJson.name.replace('.json', '');
-            } else {
-                const today = new Date();
-                const fecha = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
-                baseName = `rubrica_${cursoActual}_${fecha}`;
+            // Agrupar evaluaciones por curso
+            const porCurso = {};
+            for (const ev of allEvaluations) {
+                const curso = ev.course || `${courseSelect.value.replace('°','')}${letterSelect.value}`;
+                if (!porCurso[curso]) porCurso[curso] = [];
+                porCurso[curso].push(ev);
             }
 
-            // Guardar JSON (datos para la app)
-            await driveSaveFile(driveAccessToken, folderId, `${baseName}.json`, JSON.stringify(allEvaluations, null, 2));
+            for (const cursoCode in porCurso) {
+                const evsDelCurso = porCurso[cursoCode];
+                const cursoNombre = courseCodeToName(cursoCode).replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-            // Crear/actualizar un Google Doc por cada evaluación
-            for (const ev of allEvaluations) {
-                await syncEvaluacionDoc(ev, folderId, cursoActual);
+                // Obtener carpeta del curso
+                const rootId = await driveGetOrCreateFolder(driveAccessToken, 'Educación Musical LBO');
+                const folderId = await driveGetOrCreateFolder(driveAccessToken, cursoNombre, rootId);
+
+                // Nombre del JSON
+                const searchRes = await fetch(
+                    `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_' and '${folderId}' in parents and trashed=false and mimeType='application/json'&fields=files(id,name)`,
+                    { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+                );
+                const searchData = await searchRes.json();
+                let baseName;
+                const existingJson = searchData.files && searchData.files.find(f => f.name.endsWith('.json'));
+                if (existingJson) {
+                    baseName = existingJson.name.replace('.json', '');
+                } else {
+                    const today = new Date();
+                    const fecha = `${String(today.getDate()).padStart(2,'0')}-${String(today.getMonth()+1).padStart(2,'0')}-${today.getFullYear()}`;
+                    baseName = `rubrica_${cursoNombre.replace(' ','_')}_${fecha}`;
+                }
+
+                // Guardar JSON del curso
+                await driveSaveFile(driveAccessToken, folderId, `${baseName}.json`, JSON.stringify(evsDelCurso, null, 2));
+
+                // Guardar Doc por cada evaluación en la carpeta correcta
+                for (const ev of evsDelCurso) {
+                    await syncEvaluacionDoc(ev, folderId, cursoNombre);
+                }
             }
 
             driveSetStatus(`✅ Sincronizado con Drive (${new Date().toLocaleTimeString('es-CL')})`, '#28a745');
@@ -2126,27 +2140,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const indicadores = ev.indicators || [];
         const estudiantes = ev.results || [];
         const nCols = 2 + indicadores.length + 2; // N° + Nombre + indicadores + Puntaje + Nota
+        const nRows = 1 + estudiantes.length;
 
-        // Leer doc para borrar contenido anterior
+        // Construir datos de la tabla
+        const headers = ['N°', 'Nombre', ...indicadores, 'Puntaje', 'Nota'];
+        const filas = [headers];
+        estudiantes.forEach((r, i) => {
+            if (r.status === 'A') {
+                filas.push([String(i+1), r.name, ...indicadores.map(() => '—'), 'Ausente', '—']);
+            } else {
+                const scores = indicadores.map(ind => {
+                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    return `${sc}/${max}`;
+                });
+                filas.push([String(i+1), r.name, ...scores, String(r.status || '—'), String(r.finalGrade || '—')]);
+            }
+        });
+
+        // PASO 1: Borrar contenido existente
         const docRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
             headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
         const docData = await docRes.json();
         const endIndex = docData.body.content.reduce((max, el) => el.endIndex ? Math.max(max, el.endIndex) : max, 1);
 
-        const requests = [];
-
-        // 1. Borrar contenido existente
+        const paso1 = [];
         if (endIndex > 2) {
-            requests.push({ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } });
+            paso1.push({ deleteContentRange: { range: { startIndex: 1, endIndex: endIndex - 1 } } });
         }
-
-        // 2. Insertar encabezado
+        // Insertar encabezado de texto
         const encabezado = `${ev.title}\nProfesor Edison Olguín · ${curso} · ${fecha}\nActualizado: ${actualizacion}\n`;
-        requests.push({ insertText: { location: { index: 1 }, text: encabezado } });
-
-        // 3. Formato encabezado
-        requests.push({
+        paso1.push({ insertText: { location: { index: 1 }, text: encabezado } });
+        // Formato título
+        paso1.push({
             updateTextStyle: {
                 range: { startIndex: 1, endIndex: ev.title.length + 1 },
                 textStyle: {
@@ -2157,89 +2184,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 fields: 'bold,fontSize,foregroundColor'
             }
         });
-
-        // Aplicar primero el batch del encabezado
         await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requests })
+            body: JSON.stringify({ requests: paso1 })
         });
 
-        // 4. Insertar tabla (requiere saber el índice actual)
+        // PASO 2: Insertar tabla al final del doc
         const docRes2 = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
             headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
         const docData2 = await docRes2.json();
-        const insertIndex = docData2.body.content.reduce((max, el) => el.endIndex ? Math.max(max, el.endIndex) : max, 1) - 1;
-
-        const nRows = 1 + estudiantes.length; // encabezado + estudiantes
-
-        const tableRequests = [];
-
-        // Insertar tabla
-        tableRequests.push({
-            insertTable: {
-                rows: nRows,
-                columns: nCols,
-                location: { index: insertIndex }
-            }
-        });
+        const insertAt = docData2.body.content.reduce((max, el) => el.endIndex ? Math.max(max, el.endIndex) : max, 1) - 1;
 
         await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requests: tableRequests })
+            body: JSON.stringify({ requests: [{ insertTable: { rows: nRows, columns: nCols, location: { index: insertAt } } }] })
         });
 
-        // 5. Rellenar celdas de la tabla
+        // PASO 3: Leer doc actualizado para obtener índices reales de celdas
         const docRes3 = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
             headers: { Authorization: `Bearer ${driveAccessToken}` }
         });
         const docData3 = await docRes3.json();
+        const tableEl = docData3.body.content.find(el => el.table);
+        if (!tableEl) return;
 
-        // Encontrar la tabla en el documento
-        const tableElement = docData3.body.content.find(el => el.table);
-        if (!tableElement) return;
-
+        // PASO 4: Rellenar celdas con los índices correctos
         const fillRequests = [];
-
-        // Construir datos de la tabla
-        const headers = ['N°', 'Nombre', ...indicadores, 'Puntaje', 'Nota'];
-        const rows = [headers];
-
-        estudiantes.forEach((r, i) => {
-            if (r.status === 'A') {
-                rows.push([String(i+1), r.name, ...indicadores.map(() => '—'), 'Ausente', '—']);
-            } else {
-                const scores = indicadores.map(ind => {
-                    const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '—';
-                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
-                    return `${sc}/${max}`;
-                });
-                rows.push([String(i+1), r.name, ...scores, String(r.status || '—'), String(r.finalGrade || '—')]);
-            }
-        });
-
-        // Rellenar cada celda
-        tableElement.table.tableRows.forEach((row, rowIdx) => {
+        tableEl.table.tableRows.forEach((row, rowIdx) => {
             row.tableCells.forEach((cell, colIdx) => {
-                const cellText = (rows[rowIdx] && rows[rowIdx][colIdx]) ? rows[rowIdx][colIdx] : '';
+                const texto = (filas[rowIdx] && filas[rowIdx][colIdx] !== undefined) ? filas[rowIdx][colIdx] : '';
                 const cellIndex = cell.content[0].startIndex;
-                fillRequests.push({
-                    insertText: { location: { index: cellIndex }, text: cellText }
-                });
-                // Negrita en fila de encabezado
-                if (rowIdx === 0) {
+                if (texto) {
+                    fillRequests.push({ insertText: { location: { index: cellIndex }, text: texto } });
+                }
+                // Fila de encabezado: negrita + fondo dorado
+                if (rowIdx === 0 && texto) {
                     fillRequests.push({
                         updateTextStyle: {
-                            range: { startIndex: cellIndex, endIndex: cellIndex + cellText.length },
-                            textStyle: { bold: true, foregroundColor: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } } },
+                            range: { startIndex: cellIndex, endIndex: cellIndex + texto.length },
+                            textStyle: {
+                                bold: true,
+                                foregroundColor: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } }
+                            },
                             fields: 'bold,foregroundColor'
                         }
                     });
                     fillRequests.push({
                         updateTableCellStyle: {
-                            tableStartLocation: { index: tableElement.startIndex },
+                            tableStartLocation: { index: tableEl.startIndex },
                             rowIndex: rowIdx,
                             columnIndex: colIdx,
                             tableCellStyle: {
@@ -2253,11 +2248,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (fillRequests.length > 0) {
-            await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requests: fillRequests })
-            });
+            // Enviar en lotes de 50 para no exceder límites de la API
+            for (let i = 0; i < fillRequests.length; i += 50) {
+                await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: fillRequests.slice(i, i + 50) })
+                });
+            }
         }
     }
 
