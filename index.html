@@ -768,8 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll(".descriptor-table .score-buttons-selection .score-button").forEach(button => {
             button.addEventListener("click", event => {
                 const row = event.target.closest("tr");
+                const wasSelected = event.target.classList.contains("selected");
                 row.querySelectorAll(".score-buttons-selection .score-button").forEach(btn => btn.classList.remove("selected"));
-                event.target.classList.add("selected");
+                if (!wasSelected) event.target.classList.add("selected");
             });
         });
     }
