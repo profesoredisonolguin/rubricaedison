@@ -825,6 +825,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         calculateStudentScores(row);
                         debouncedSaveWithDrive();
                     });
+                    button.dataset.scoreVal = i;
                     container.appendChild(button);
                 }
             });
@@ -1383,8 +1384,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (score !== null && score !== undefined) {
                                 const cell = row.querySelector(`td[data-indicador='${indicatorName}']`);
                                 if (cell) {
-                                    const scoreButton = cell.querySelector(`.score-button[data-score='${score}']`);
-                                    if (scoreButton) scoreButton.click();
+                                    const scoreButton = cell.querySelector(`.score-button[data-score-val='${score}']`);
+                                    if (scoreButton) {
+                                        cell.querySelectorAll('.score-button').forEach(b => b.classList.remove('selected'));
+                                        scoreButton.classList.add('selected');
+                                    }
                                 }
                             }
                         }
