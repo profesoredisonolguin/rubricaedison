@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const evaluationData = {
             id: `${new Date().getTime()}-${Math.random()}`,
             title: evaluationTitle,
-            course: `${courseSelect.value}${letterSelect.value}`,
+            course: `${courseSelect.value.replace('°', '')}${letterSelect.value}`,
             date: new Date().toISOString(),
             indicators: [],
             // FIX 1: Guardar el maxScore real de cada indicador
@@ -1062,13 +1062,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const importedData = JSON.parse(event.target.result);
                 if (!Array.isArray(importedData)) throw new Error('El archivo no tiene el formato correcto.');
                 const existing = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-                // Combinar sin duplicar (por id)
-                const existingIds = new Set(existing.map(e => e.id));
-                const newEntries = importedData.filter(e => !existingIds.has(e.id));
-                const merged = [...existing, ...newEntries];
+
+                // Reemplazar evaluaciones con mismo ID, agregar las nuevas
+                const importedIds = new Set(importedData.map(e => e.id));
+                const sinReemplazar = existing.filter(e => !importedIds.has(e.id));
+                const merged = [...sinReemplazar, ...importedData];
+
                 localStorage.setItem('allEvaluations', JSON.stringify(merged));
                 displaySavedEvaluations();
-                alert(`Importación exitosa. Se agregaron ${newEntries.length} evaluación(es) nueva(s).`);
+                alert(`Importación exitosa. Se cargaron ${importedData.length} evaluación(es).`);
             } catch (err) {
                 alert('Error al importar: ' + err.message);
             }
@@ -1385,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (score !== null && score !== undefined) {
                                 const cell = row.querySelector(`td[data-indicador='${indicatorName}']`);
                                 if (cell) {
-                                    const scoreButton = cell.querySelector(`.score-button[data-score-val='${score}']`);
+                                    const scoreButton = cell.querySelector(`.score-button[data-score='${score}']`);
                                     if (scoreButton) {
                                         cell.querySelectorAll('.score-button').forEach(b => b.classList.remove('selected'));
                                         scoreButton.classList.add('selected');
@@ -1395,10 +1397,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         calculateStudentScores(row);
                         const commentArea = row.querySelector('.student-comment');
-                        if (commentArea && studentData.comment) commentArea.value = studentData.comment;
+                        if (commentArea && studentData.observation) commentArea.value = studentData.observation;
                     }
                 }
             });
+            debouncedSaveWithDrive();
         }, 400);
     }
 
