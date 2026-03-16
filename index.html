@@ -2071,7 +2071,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             for (const cursoCode in porCurso) {
                 const evsDelCurso = porCurso[cursoCode];
-                const cursoNombre = courseCodeToName(cursoCode).replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                // cursoCode es tipo "4A", "7B" etc.
+                const match = cursoCode.match(/^(\d+)([A-Z])$/);
+                if (!match) { console.warn('Curso no reconocido:', cursoCode); continue; }
+                const nombreNum = COURSE_NAMES[match[1]] || match[1];
+                const letra = match[2];
+                const cursoNombre = `${nombreNum.charAt(0).toUpperCase() + nombreNum.slice(1)} ${letra}`;
 
                 // Obtener carpeta del curso
                 const rootId = await driveGetOrCreateFolder(driveAccessToken, 'Educación Musical LBO');
@@ -2079,7 +2084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Nombre del JSON
                 const searchRes = await fetch(
-                    `https://www.googleapis.com/drive/v3/files?q=name contains 'rubrica_' and '${folderId}' in parents and trashed=false and mimeType='application/json'&fields=files(id,name)`,
+                    `https://www.googleapis.com/drive/v3/files?q=name+contains+'rubrica_'+and+'${folderId}'+in+parents+and+trashed=false+and+mimeType='application/json'&fields=files(id,name)`,
                     { headers: { Authorization: `Bearer ${driveAccessToken}` } }
                 );
                 const searchData = await searchRes.json();
