@@ -2155,8 +2155,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     `https://www.googleapis.com/drive/v3/files/${docId}?fields=id,trashed`,
                     { headers: { Authorization: `Bearer ${driveAccessToken}` } }
                 );
-                const checkData = await checkRes.json();
-                if (checkData.trashed || checkData.error) docId = null;
+                if (!checkRes.ok) {
+                    docId = null;
+                } else {
+                    const checkData = await checkRes.json();
+                    if (checkData.trashed || checkData.error) docId = null;
+                }
             } catch { docId = null; }
         }
 
