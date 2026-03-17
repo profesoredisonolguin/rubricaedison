@@ -1241,9 +1241,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
 
             // Observación
-            if (result.observation && result.observation.trim()) {
+            if (result.comment && result.comment.trim()) {
                 html += `<div style="background:#f5e9cc; border-left:3px solid #c9a84c; border-radius:0 8px 8px 0; padding:10px 14px; font-size:13px; color:#5a4a2f;">
-                    <span style="font-weight:600;">💬 Observación del profesor:</span><br>${result.observation}
+                    <span style="font-weight:600;">💬 Observación del profesor:</span><br>${result.comment}
                 </div>`;
             }
             html += `</div>`;
@@ -1397,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         calculateStudentScores(row);
                         const commentArea = row.querySelector('.student-comment');
-                        if (commentArea && studentData.observation) commentArea.value = studentData.observation;
+                        if (commentArea && studentData.comment) commentArea.value = studentData.comment;
                     }
                 }
             });
@@ -2374,10 +2374,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Ajustar texto en todas las celdas
                 if (endIndex > startIndex) {
                     formatRequests.push({
-                        updateParagraphStyle: {
+                        updateTextStyle: {
                             range: { startIndex, endIndex },
-                            paragraphStyle: { namedStyleType: 'NORMAL_TEXT' },
-                            fields: 'namedStyleType'
+                            textStyle: { fontSize: { magnitude: 9, unit: 'PT' } },
+                            fields: 'fontSize'
                         }
                     });
                 }
