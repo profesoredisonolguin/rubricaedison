@@ -2213,22 +2213,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const actualizacion = new Date().toLocaleString('es-CL');
         const indicadores = ev.indicators || [];
         const estudiantes = ev.results || [];
-        const nCols = 1 + indicadores.length + 2; // Nombre + indicadores + Puntaje + Nota
+        const nCols = 1 + indicadores.length + 3; // Nombre + indicadores + Puntaje + Nota + Observación
         const nRows = 1 + estudiantes.length;
 
         // Construir datos de la tabla
-        const headers = ['Nombre', ...indicadores, 'Puntaje', 'Nota'];
+        const headers = ['Nombre', ...indicadores, 'Puntaje', 'Nota', 'Observación'];
         const filas = [headers];
         estudiantes.forEach((r, i) => {
             if (r.status === 'A') {
-                filas.push([r.name, ...indicadores.map(() => '-'), 'Ausente', '-']);
+                filas.push([r.name, ...indicadores.map(() => '-'), 'Ausente', '-', '']);
             } else {
                 const scores = indicadores.map(ind => {
                     const sc = (r.scores[ind] !== null && r.scores[ind] !== undefined) ? r.scores[ind] : '-';
                     const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
                     return `${sc}/${max}`;
                 });
-                filas.push([r.name, ...scores, String(r.status || '-'), String(r.finalGrade || '-')]);
+                filas.push([r.name, ...scores, String(r.status || '-'), String(r.finalGrade || '-'), String(r.comment || r.observation || '')]);
             }
         });
 
