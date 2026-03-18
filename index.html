@@ -2233,12 +2233,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
                     return `${sc}/${max}`;
                 });
-                filas.push([r.name, ...scores, String(r.status || '-'), String(r.finalGrade || '-'), String(r.comment || r.observation || '')]);
+                const obs = r.comment || r.observation || '';
+                console.log('Estudiante:', r.name, '| Status:', r.status, '| Comment:', obs);
+                filas.push([r.name, ...scores, String(r.status || '-'), String(r.finalGrade || '-'), obs]);
             }
         });
 
-        // PASO 1: Limpiar hoja
-        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:Z1000:clear`, {
+        // PASO 1: Limpiar hoja completamente
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:ZZ10000:clear`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' }
         });
