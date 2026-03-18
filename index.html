@@ -322,7 +322,9 @@
             <button id="drive-connect-button" style="padding: 5px 10px; font-size: 13px; cursor: pointer; background-color: transparent; color: #888; border: 1px solid #ccc; border-radius: 4px;">☁ Conectar con Google Drive</button>
             <div id="drive-status" style="margin-top: 5px; font-size: 12px; color: #888;"></div>
         </div>
-        <div id="acceso-profesor-div" style="text-align: right; padding: 5px 0 10px 0;">
+        <div id="acceso-profesor-div" style="text-align: right; padding: 5px 0 10px 0; display:flex; justify-content:flex-end; align-items:center; gap:8px;">
+            <label for="import-input-top" style="padding: 5px 10px; font-size: 12px; cursor: pointer; background-color: transparent; color: #aaa; border: 1px solid #ddd; border-radius: 4px; display:inline-block;">⬆ Importar datos</label>
+            <input type="file" id="import-input-top" accept=".json" style="display: none;">
             <button id="acceso-profesor-button" style="padding: 5px 10px; font-size: 12px; cursor: pointer; background-color: transparent; color: #ccc; border: 1px solid #eee; border-radius: 4px;">☁ Acceso Profesor</button>
         </div>
 
@@ -1053,7 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     });
 
-    document.getElementById('import-input').addEventListener('change', (e) => {
+    function importarJSON(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -1062,12 +1064,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const importedData = JSON.parse(event.target.result);
                 if (!Array.isArray(importedData)) throw new Error('El archivo no tiene el formato correcto.');
                 const existing = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-
-                // Reemplazar evaluaciones con mismo ID, agregar las nuevas
                 const importedIds = new Set(importedData.map(e => e.id));
                 const sinReemplazar = existing.filter(e => !importedIds.has(e.id));
                 const merged = [...sinReemplazar, ...importedData];
-
                 localStorage.setItem('allEvaluations', JSON.stringify(merged));
                 displaySavedEvaluations();
                 alert(`Importación exitosa. Se cargaron ${importedData.length} evaluación(es).`);
@@ -1077,7 +1076,10 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = '';
         };
         reader.readAsText(file);
-    });
+    }
+
+    document.getElementById('import-input').addEventListener('change', importarJSON);
+    document.getElementById('import-input-top').addEventListener('change', importarJSON);
 
     viewHistoryButton.addEventListener("click", () => {
         mainView.style.display = 'none';
