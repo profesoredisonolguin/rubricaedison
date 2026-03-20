@@ -520,11 +520,9 @@ document.addEventListener('DOMContentLoaded', () => {
             results: []
         };
 
-        rubricTable.querySelectorAll('thead th').forEach((th, index) => {
-            if (index > 1 && index < th.parentElement.cells.length - 2) {
-                evaluationData.indicators.push(th.textContent);
-            }
-        });
+        rubricTable.querySelectorAll('thead th[data-indicador]').length > 0
+            ? rubricTable.querySelectorAll('thead th[data-indicador]').forEach(th => evaluationData.indicators.push(th.textContent))
+            : rubricTable.querySelectorAll('tbody tr:first-child td[data-indicador]').forEach(td => evaluationData.indicators.push(td.dataset.indicador));
 
         // FIX 1: Leer el maxScore real desde las celdas de la primera fila
         const firstDataRow = rubricTable.querySelector('tbody tr');
@@ -788,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!students || students.length === 0) return rubricaContainer.innerHTML = `<p>No hay alumnos para ${courseKey}.</p>`;
 
         let headerHTML = `<th style="width: 40px;">Aus.</th><th>Nombre</th>`;
-        selectedIndicators.forEach(row => { headerHTML += `<th>${row.dataset.indicator}</th>`; });
+        selectedIndicators.forEach(row => { headerHTML += `<th data-indicador="${row.dataset.indicator}">${row.dataset.indicator}</th>`; });
         headerHTML += `<th class="total-score-header">Puntaje</th><th class="final-grade-header">Nota</th>`;
 
         let bodyHTML = students.map(student => {
@@ -2216,7 +2214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function actualizarContenidoDoc(sheetId, ev, curso) {
         const fecha = new Date(ev.date).toLocaleDateString('es-CL');
         const actualizacion = new Date().toLocaleString('es-CL');
-        const indicadores = ev.indicators || [];
+        const indicadores = (ev.indicators || []).filter(i => i !== 'Puntaje' && i !== 'Nota' && i !== 'Observación');
         const estudiantes = ev.results || [];
 
         // Construir filas
