@@ -1157,6 +1157,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Registrar consulta en Drive (sin bloquear la UI)
+        registrarConsultaApoderado(foundName, foundCourse, rut);
+
         // Buscar evaluaciones del estudiante
         const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
         const cursoCodigo = foundCourse; // ej: "7A"
@@ -2471,8 +2474,311 @@ document.addEventListener('DOMContentLoaded', () => {
         driveStatus.textContent = msg;
     }
 
+    async function registrarConsultaApoderado(nombre, curso, rut) {
+        try {
+            // Necesita token — obtenerlo anónimamente con la API pública de Sheets
+            // Usar un Sheet público con permisos de escritura via Apps Script no es viable aquí
+            // En su lugar, usamos el token del profesor si está disponible
+            if (!driveAccessToken) return;
+
+            const REGISTRO_NOMBRE = '_registro_consultas';
+            const rootId = await driveGetOrCreateFolder(driveAccessToken, 'Educación Musical LBO');
+
+            // Buscar o crear el Sheet de registro
+            let registroId = null;
+            const searchRes = await fetch(
+                `https://www.googleapis.com/drive/v3/files?q=name='${REGISTRO_NOMBRE}' and '${rootId}' in parents and trashed=false and mimeType='application/vnd.google-apps.spreadsheet'&fields=files(id)`,
+                { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+            );
+            const searchData = await searchRes.json();
+            if (searchData.files && searchData.files.length > 0) {
+                registroId = searchData.files[0].id;
+            } else {
+                const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: REGISTRO_NOMBRE,
+                        mimeType: 'application/vnd.google-apps.spreadsheet',
+                        parents: [rootId]
+                    })
+                });
+                const createData = await createRes.json();
+                registroId = createData.id;
+            }
+
+            if (!registroId) return;
+
+            // Verificar si existe la pestaña del curso, si no crearla
+            const sheetInfoRes = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${registroId}?fields=sheets.properties`,
+                { headers: { Authorization: `Bearer ${driveAccessToken}` } }
+            );
+            const sheetInfo = await sheetInfoRes.json();
+            const pestanas = sheetInfo.sheets.map(s => s.properties.title);
+
+            if (!pestanas.includes(curso)) {
+                // Crear pestaña del curso
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${registroId}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: curso } } }] })
+                });
+                // Agregar encabezados
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${registroId}/values/${encodeURIComponent(curso)}!A1:D1?valueInputOption=RAW`, {
+                    method: 'PUT',
+                    headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: [['Fecha', 'Hora', 'Estudiante', 'RUT']] })
+                });
+            }
+
+            // Agregar fila con la consulta
+            const now = new Date();
+            const fecha = now.toLocaleDateString('es-CL');
+            const hora = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${registroId}/values/${encodeURIComponent(curso)}!A:D:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${driveAccessToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: [[fecha, hora, nombre, rut]] })
+            });
+
+        } catch (err) {
+            console.warn('No se pudo registrar consulta:', err);
+        }
+    }
+
     displaySavedEvaluations();
 });
+</script>
+
+<!-- Asistente Virtual -->
+<style>
+#asistente-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    height: 48px;
+    padding: 0 20px;
+    border-radius: 24px;
+    background: #f5f3ee;
+    color: #8b6914;
+    border: 2px solid #c9a84c;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(139,105,20,0.2);
+    z-index: 1000;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+#asistente-btn:hover { background: #c9a84c; color: white; box-shadow: 0 6px 20px rgba(139,105,20,0.35); }
+
+#asistente-panel {
+    position: fixed;
+    bottom: 96px;
+    right: 28px;
+    width: 340px;
+    max-height: 480px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+    border: 1px solid #e0d9ce;
+    overflow: hidden;
+}
+#asistente-panel.visible { display: flex; }
+
+#asistente-header {
+    background: linear-gradient(135deg, #8b6914, #c9a84c);
+    color: white;
+    padding: 14px 16px;
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#asistente-header span { flex: 1; }
+#asistente-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.8;
+    padding: 0;
+}
+#asistente-close:hover { opacity: 1; }
+
+#asistente-mensajes {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #faf9f6;
+}
+.msg-asistente {
+    background: white;
+    border: 1px solid #e0d9ce;
+    border-radius: 12px 12px 12px 2px;
+    padding: 10px 13px;
+    font-size: 13px;
+    color: #2c2416;
+    max-width: 90%;
+    line-height: 1.5;
+    font-family: 'DM Sans', sans-serif;
+}
+.msg-usuario {
+    background: linear-gradient(135deg, #8b6914, #c9a84c);
+    color: white;
+    border-radius: 12px 12px 2px 12px;
+    padding: 10px 13px;
+    font-size: 13px;
+    max-width: 90%;
+    align-self: flex-end;
+    line-height: 1.5;
+    font-family: 'DM Sans', sans-serif;
+}
+.msg-escribiendo {
+    background: white;
+    border: 1px solid #e0d9ce;
+    border-radius: 12px 12px 12px 2px;
+    padding: 10px 13px;
+    font-size: 13px;
+    color: #8a7d6b;
+    font-style: italic;
+    font-family: 'DM Sans', sans-serif;
+}
+
+#asistente-input-area {
+    padding: 12px;
+    border-top: 1px solid #e0d9ce;
+    display: flex;
+    gap: 8px;
+    background: white;
+}
+#asistente-input {
+    flex: 1;
+    border: 1px solid #e0d9ce;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    resize: none;
+    height: 36px;
+}
+#asistente-input:focus { border-color: #c9a84c; }
+#asistente-enviar {
+    background: linear-gradient(135deg, #8b6914, #c9a84c);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+#asistente-enviar:hover { opacity: 0.9; }
+</style>
+
+<button id="asistente-btn" title="Asistente de ayuda">❓ ¿Necesitas ayuda?</button>
+
+<div id="asistente-panel">
+    <div id="asistente-header">
+        <span>🎵 Asistente Musical</span>
+        <button id="asistente-close">✕</button>
+    </div>
+    <div id="asistente-mensajes">
+        <div class="msg-asistente">¡Hola! Soy el asistente de la Rúbrica de Educación Musical. ¿En qué puedo ayudarte?</div>
+    </div>
+    <div id="asistente-input-area">
+        <input type="text" id="asistente-input" placeholder="Escribe tu pregunta...">
+        <button id="asistente-enviar">➤</button>
+    </div>
+</div>
+
+<script>
+(function() {
+    const btn = document.getElementById('asistente-btn');
+    const panel = document.getElementById('asistente-panel');
+    const closeBtn = document.getElementById('asistente-close');
+    const mensajes = document.getElementById('asistente-mensajes');
+    const input = document.getElementById('asistente-input');
+    const enviar = document.getElementById('asistente-enviar');
+
+    const historial = [];
+
+    const SISTEMA = `Eres un asistente amable y claro que ayuda a los usuarios de la Rúbrica de Evaluación de Educación Musical del Profesor Edison Olguín. Respondes SIEMPRE en español.
+
+La plataforma tiene estas funciones principales:
+- PROFESOR: Conectarse a Google Drive con "☁ Acceso Profesor", seleccionar indicadores y generar rúbricas por curso, asignar puntajes a cada estudiante, marcar ausentes, agregar observaciones, ver análisis por indicador, ver ranking del curso, ver estudiantes en riesgo, exportar/importar datos JSON, ver historial de evaluaciones con gráficos.
+- APODERADO: Entrar a "👨‍👩‍👧 Apoderados" e ingresar el RUT del estudiante para ver sus notas, puntajes por indicador, observaciones del profesor y gráfico de progreso.
+- DRIVE: Los resultados se guardan automáticamente en Google Drive en carpetas por curso dentro de "Educación Musical LBO". Cada evaluación genera un Google Sheet con los resultados.
+
+Responde de forma breve, amable y práctica. Si no sabes algo específico de la plataforma, sugiere contactar al Profesor Edison Olguín.`;
+
+    btn.addEventListener('click', () => panel.classList.toggle('visible'));
+    closeBtn.addEventListener('click', () => panel.classList.remove('visible'));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') enviarMensaje(); });
+    enviar.addEventListener('click', enviarMensaje);
+
+    function agregarMensaje(texto, tipo) {
+        const div = document.createElement('div');
+        div.className = tipo;
+        div.textContent = texto;
+        mensajes.appendChild(div);
+        mensajes.scrollTop = mensajes.scrollHeight;
+        return div;
+    }
+
+    async function enviarMensaje() {
+        const texto = input.value.trim();
+        if (!texto) return;
+        input.value = '';
+
+        agregarMensaje(texto, 'msg-usuario');
+        historial.push({ role: 'user', content: texto });
+
+        const escribiendo = agregarMensaje('Escribiendo...', 'msg-escribiendo');
+
+        try {
+            const res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    system: SISTEMA,
+                    messages: historial
+                })
+            });
+            const data = await res.json();
+            const respuesta = data.content && data.content[0] ? data.content[0].text : 'Lo siento, no pude procesar tu consulta.';
+
+            escribiendo.remove();
+            agregarMensaje(respuesta, 'msg-asistente');
+            historial.push({ role: 'assistant', content: respuesta });
+        } catch (err) {
+            escribiendo.remove();
+            agregarMensaje('Lo siento, hubo un error al conectarme. Intenta de nuevo.', 'msg-asistente');
+        }
+    }
+})();
 </script>
 </body>
 </html>
