@@ -1173,10 +1173,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (evsDelCurso.length === 0) {
             try {
                 apoderadoResults.innerHTML = '<div style="text-align:center; padding:20px; color:#8a7d6b;">☁️ Cargando desde Drive...</div>';
-                const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`);
-                const data = await res.json();
+                const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`, {
+                    redirect: 'follow'
+                });
+                const text = await res.text();
+                const data = JSON.parse(text);
                 if (data.ok && Array.isArray(data.data)) {
-                    // Guardar en localStorage para próximas consultas
                     const merged = [...allEvaluations, ...data.data.filter(e => !allEvaluations.find(x => x.id === e.id))];
                     localStorage.setItem('allEvaluations', JSON.stringify(merged));
                     allEvaluations = merged;
@@ -1197,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (evsConEstudiante.length === 0) {
             apoderadoResults.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:30px;">
                 <div style="font-size:2rem;">📋</div>
-                <p>Estudiante encontrado: <b>${foundName}</b> (${cursoCodigo})</p>
+                <p>Estudiante encontrado: <b>${foundName}</b> (${foundCourse})</p>
                 <p>Aún no hay evaluaciones registradas.</p>
             </div>`;
             return;
