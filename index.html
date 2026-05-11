@@ -1095,6 +1095,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const viewApoderadoButton = document.getElementById('view-apoderado-button');
     const backFromApoderadoButton = document.getElementById('back-from-apoderado-button');
     const rutInput = document.getElementById('rut-input');
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyr3151ytTh4bQR1OaIf-yoTD29ReXxb77A3mWg24kbA7f-sT2WYpEMF_9o_9JijZxW/exec';
+
     const rutBuscarButton = document.getElementById('rut-buscar-button');
     const rutError = document.getElementById('rut-error');
     const apoderadoResults = document.getElementById('apoderado-results');
@@ -1103,7 +1105,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mainView.style.display = 'none';
         historyView.style.display = 'none';
         apoderadoView.style.display = 'block';
-        // Solo agregar modo-apoderado si NO es profesor (sin Drive)
         if (!driveAccessToken) {
             document.body.classList.add('modo-apoderado');
         }
@@ -1129,11 +1130,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     rutInput.addEventListener('keydown', e => { if (e.key === 'Enter') rutBuscarButton.click(); });
 
-    rutBuscarButton.addEventListener('click', () => {
+    rutBuscarButton.addEventListener('click', async () => {
         const rut = rutInput.value.trim().toUpperCase();
         if (!rut) return;
         rutError.style.display = 'none';
-        apoderadoResults.innerHTML = '';
+        apoderadoResults.innerHTML = '<div style="text-align:center; padding:20px; color:#8a7d6b;">🔍 Buscando...</div>';
 
         // Buscar el RUT en los datos de estudiantes (formato "NOMBRE|RUT")
         const studentData = JSON.parse(localStorage.getItem('customStudentData')) || ORIGINAL_ALL_STUDENTS_DATA;
@@ -1153,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!foundName) {
+            apoderadoResults.innerHTML = '';
             rutError.style.display = 'block';
             return;
         }
@@ -1160,13 +1162,32 @@ document.addEventListener('DOMContentLoaded', () => {
         // Registrar consulta en Drive (sin bloquear la UI)
         registrarConsultaApoderado(foundName, foundCourse, rut);
 
-        // Buscar evaluaciones del estudiante
-        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-        const cursoCodigo = foundCourse; // ej: "7A"
-        const evsDelCurso = allEvaluations.filter(ev => {
+        // Buscar evaluaciones primero en localStorage
+        let allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        let evsDelCurso = allEvaluations.filter(ev => {
             const code = ev.course ? ev.course.replace(/[°\s]/g,'').toUpperCase() : '';
-            return code === cursoCodigo.toUpperCase() || ev.course === cursoCodigo;
+            return code === foundCourse.toUpperCase() || ev.course === foundCourse;
         });
+
+        // Si no hay datos locales, buscar en Drive via Apps Script
+        if (evsDelCurso.length === 0) {
+            try {
+                apoderadoResults.innerHTML = '<div style="text-align:center; padding:20px; color:#8a7d6b;">☁️ Cargando desde Drive...</div>';
+                const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`);
+                const data = await res.json();
+                if (data.ok && Array.isArray(data.data)) {
+                    // Guardar en localStorage para próximas consultas
+                    const merged = [...allEvaluations, ...data.data.filter(e => !allEvaluations.find(x => x.id === e.id))];
+                    localStorage.setItem('allEvaluations', JSON.stringify(merged));
+                    allEvaluations = merged;
+                    evsDelCurso = data.data;
+                }
+            } catch (err) {
+                console.warn('No se pudo cargar desde Drive:', err);
+            }
+        }
+
+        apoderadoResults.innerHTML = '';
 
         const evsConEstudiante = evsDelCurso.map(ev => {
             const result = ev.results ? ev.results.find(r => r.name && r.name.toUpperCase() === foundName.toUpperCase()) : null;
