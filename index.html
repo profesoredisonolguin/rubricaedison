@@ -1170,24 +1170,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return code === foundCourse.toUpperCase() || ev.course === foundCourse;
         });
 
-        // Si no hay datos locales, buscar en Drive via Apps Script
-        if (evsDelCurso.length === 0) {
-            try {
-                apoderadoResults.innerHTML = '<div style="text-align:center; padding:20px; color:#8a7d6b;">☁️ Cargando desde Drive...</div>';
-                const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`, {
-                    redirect: 'follow'
-                });
-                const text = await res.text();
-                const data = JSON.parse(text);
-                if (data.ok && Array.isArray(data.data)) {
-                    const merged = [...allEvaluations, ...data.data.filter(e => !allEvaluations.find(x => x.id === e.id))];
-                    localStorage.setItem('allEvaluations', JSON.stringify(merged));
-                    allEvaluations = merged;
-                    evsDelCurso = data.data;
-                }
-            } catch (err) {
-                console.warn('No se pudo cargar desde Drive:', err);
+        // Siempre cargar desde Drive para tener datos actualizados
+        try {
+            apoderadoResults.innerHTML = '<div style="text-align:center; padding:20px; color:#8a7d6b;">☁️ Cargando desde Drive...</div>';
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`, {
+                redirect: 'follow'
+            });
+            const text = await res.text();
+            const data = JSON.parse(text);
+            if (data.ok && Array.isArray(data.data)) {
+                const merged = [...allEvaluations.filter(e => e.course !== foundCourse), ...data.data];
+                localStorage.setItem('allEvaluations', JSON.stringify(merged));
+                allEvaluations = merged;
+                evsDelCurso = data.data;
             }
+        } catch (err) {
+            console.warn('No se pudo cargar desde Drive:', err);
         }
 
         apoderadoResults.innerHTML = '';
@@ -1220,12 +1218,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         evsConEstudiante.forEach(({ev, result}) => {
             const nota = parseFloat(result.finalGrade);
-            const color = nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
-            const bg = nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
+            const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
+            const color = esSI ? '#8a7d6b' : nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+            const bg = esSI ? '#f5f3ee' : nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
             html += `<div style="background:${bg}; border:1px solid ${color}30; border-radius:10px; padding:10px 14px; min-width:130px;">
                 <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">${new Date(ev.date).toLocaleDateString('es-CL')}</div>
                 <div style="font-size:13px; font-weight:600; margin-bottom:4px;">${ev.title}</div>
-                <div style="font-size:1.4rem; font-weight:700; color:${color};">${result.finalGrade}</div>
+                <div style="font-size:1.4rem; font-weight:700; color:${color};">${esSI ? 'S/I' : result.finalGrade}</div>
             </div>`;
         });
         html += `</div></div>`;
@@ -1287,8 +1286,8 @@ document.addEventListener('DOMContentLoaded', () => {
         apoderadoResults.innerHTML = html;
 
         // Renderizar gráfico
-        const labels = evsConEstudiante.map(({ev}) => ev.title);
-        const notas = evsConEstudiante.map(({result}) => parseFloat(result.finalGrade));
+        const labels = evsConEstudiante.filter(({result}) => result.finalGrade !== 'S/I').map(({ev}) => ev.title);
+        const notas = evsConEstudiante.filter(({result}) => result.finalGrade !== 'S/I').map(({result}) => parseFloat(result.finalGrade));
         const ctx = document.getElementById(chartId).getContext('2d');
         new Chart(ctx, {
             type: 'line',
