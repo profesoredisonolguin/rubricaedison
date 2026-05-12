@@ -1987,8 +1987,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const datosFolderId = await driveGetOrCreateFolder(driveAccessToken, '_datos', driveFolderId);
                     const match = `${courseSelect.value.replace('°','')}${letterSelect.value}`.match(/^(\d+)([A-Z])$/);
                     if (match) {
-                        const nombreNum = COURSE_NAMES[match[1]] || match[1];
-                        const cursoNombre = `${nombreNum.charAt(0).toUpperCase() + nombreNum.slice(1)} ${match[2]}`;
+                        const cursoNombre = getCursoNombre(`${courseSelect.value.replace('°','')}${letterSelect.value}`);
                         const searchRes = await fetch(
                             `https://www.googleapis.com/drive/v3/files?q=name+contains+'rubrica_'+and+'${datosFolderId}'+in+parents+and+trashed=false+and+mimeType='application/json'&fields=files(id,name)`,
                             { headers: { Authorization: `Bearer ${driveAccessToken}` } }
@@ -2050,13 +2049,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return createData.id;
     }
 
+
+    function getCursoNombre(cursoCode) {
+        // cursoCode es tipo "4A", "7B" etc.
+        const code = cursoCode.replace('°', '').replace(/\s/g, '');
+        const match = code.match(/^(\d+)([A-Z])$/);
+        if (!match) return cursoCode;
+        const nombreNum = COURSE_NAMES[match[1]] || match[1];
+        return `${nombreNum.charAt(0).toUpperCase() + nombreNum.slice(1)} ${match[2]}`;
+    }
+
     async function driveGetCourseFolder(token) {
-        // Carpeta raíz: "Educación Musical LBO"
         const rootId = await driveGetOrCreateFolder(token, 'Educación Musical LBO');
-        // Subcarpeta del curso: ej. "Séptimo A"
-        const cursoNombre = courseCodeToName(`${courseSelect.value.replace('°', '')}${letterSelect.value}`)
-            .replace('_', ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
+        const cursoCode = `${courseSelect.value.replace('°', '')}${letterSelect.value}`;
+        const cursoNombre = getCursoNombre(cursoCode);
         const subFolderId = await driveGetOrCreateFolder(token, cursoNombre, rootId);
         return subFolderId;
     }
@@ -2128,9 +2134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // cursoCode es tipo "4A", "7B" etc.
                 const match = cursoCode.match(/^(\d+)([A-Z])$/);
                 if (!match) { console.warn('Curso no reconocido:', cursoCode); continue; }
-                const nombreNum = COURSE_NAMES[match[1]] || match[1];
-                const letra = match[2];
-                const cursoNombre = `${nombreNum.charAt(0).toUpperCase() + nombreNum.slice(1)} ${letra}`;
+                const cursoNombre = getCursoNombre(cursoCode);
 
                 // Obtener carpeta del curso
                 const rootId = await driveGetOrCreateFolder(driveAccessToken, 'Educación Musical LBO');
