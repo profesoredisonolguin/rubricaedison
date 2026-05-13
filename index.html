@@ -521,6 +521,15 @@ document.addEventListener('DOMContentLoaded', () => {
             results: []
         };
 
+        // Preservar ID y fecha originales si ya existe
+        let allSavedEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const existingEval = allSavedEvaluations.find(e => e.title === evaluationData.title && e.course === evaluationData.course);
+        if (existingEval) {
+            evaluationData.id = existingEval.id;
+            evaluationData.date = existingEval.date;
+            if (existingEval._docId) evaluationData._docId = existingEval._docId;
+        }
+
         rubricTable.querySelectorAll('thead th[data-indicador]').length > 0
             ? rubricTable.querySelectorAll('thead th[data-indicador]').forEach(th => evaluationData.indicators.push(th.textContent))
             : rubricTable.querySelectorAll('tbody tr:first-child td[data-indicador]').forEach(td => evaluationData.indicators.push(td.dataset.indicador));
@@ -549,7 +558,6 @@ document.addEventListener('DOMContentLoaded', () => {
             evaluationData.results.push(studentResult);
         });
 
-        let allSavedEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
         const existingEvalIndex = allSavedEvaluations.findIndex(
             e => e.title === evaluationData.title && e.course === evaluationData.course
         );
