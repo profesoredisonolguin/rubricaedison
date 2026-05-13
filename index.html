@@ -516,8 +516,8 @@ document.addEventListener('DOMContentLoaded', () => {
             course: `${courseSelect.value.replace('°', '')}${letterSelect.value}`,
             date: new Date().toISOString(),
             indicators: [],
-            // FIX 1: Guardar el maxScore real de cada indicador
             indicatorMaxScores: {},
+            comentarioGeneral: document.getElementById('comentario-general') ? document.getElementById('comentario-general').value.trim() : '',
             results: []
         };
 
@@ -802,13 +802,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<tr>${cells}</tr>`;
         }).join("");
 
-        rubricaContainer.innerHTML = `<h2>Rúbrica para ${courseSelect.value}${letterSelect.value}</h2><table class="compact-rubric-table"><thead><tr>${headerHTML}<th>Observación</th></tr></thead><tbody>${bodyHTML}</tbody></table>`;
+        rubricaContainer.innerHTML = `
+            <h2>Rúbrica para ${courseSelect.value}${letterSelect.value}</h2>
+            <div style="margin-bottom:12px; background:var(--accent-light); border-radius:10px; padding:12px 16px; border:1px solid #e0c97a;">
+                <label style="font-size:13px; font-weight:600; color:var(--accent); display:block; margin-bottom:6px;">💬 Comentario general para apoderados (opcional)</label>
+                <textarea id="comentario-general" placeholder="Ej: Esta evaluación fue de canto grupal. Los ausentes deben recuperar antes del viernes..." style="width:100%; min-height:52px; border:1px solid #e0c97a; border-radius:8px; font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 10px; background:white; color:var(--text); resize:vertical;"></textarea>
+            </div>
+            <table class="compact-rubric-table"><thead><tr>${headerHTML}<th>Observación</th></tr></thead><tbody>${bodyHTML}</tbody></table>`;
         addRubricScoreEventListeners();
         analysisButtonsContainer.style.display = "block";
         analysisResultsContainer.innerHTML = "";
         studentSearchContainer.style.display = 'block';
         studentSearchInput.value = '';
         document.querySelectorAll('.compact-rubric-table tbody tr').forEach(r => r.style.display = '');
+
+        // Listener para comentario general
+        const cgField = document.getElementById('comentario-general');
+        if (cgField) {
+            cgField.addEventListener('input', debouncedSaveWithDrive);
+        }
     });
 
     function addRubricScoreEventListeners() {
@@ -1398,6 +1410,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         generateButton.click();
+
+        // Restaurar comentario general
+        setTimeout(() => {
+            const cgField = document.getElementById('comentario-general');
+            if (cgField && evaluationToLoad.comentarioGeneral) {
+                cgField.value = evaluationToLoad.comentarioGeneral;
+            }
+        }, 100);
 
         setTimeout(() => {
             const studentRows = document.querySelectorAll('.compact-rubric-table tbody tr');
