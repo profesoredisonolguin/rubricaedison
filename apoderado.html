@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Apoderados — Educación Musical</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    :root {
+        --bg: #f5f3ee;
+        --surface: #ffffff;
+        --surface2: #faf9f6;
+        --accent: #8b6914;
+        --accent2: #b8891e;
+        --accent-light: #f5e9cc;
+        --border: #e0d9ce;
+        --text: #2c2416;
+        --text-muted: #8a7d6b;
+        --teal: #0d7377;
+        --teal-light: #e6f4f4;
+        --red: #c0392b;
+        --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'DM Sans', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+    }
+
+    .header {
+        background: var(--surface);
+        border-bottom: 2px solid var(--accent-light);
+        padding: 20px 28px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 2px 12px rgba(139,105,20,0.08);
+    }
+    .clef {
+        font-size: 3rem;
+        color: #c9a84c;
+        opacity: 0.7;
+        font-family: Georgia, serif;
+        line-height: 1;
+    }
+    .header-text h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.4rem;
+        color: var(--accent);
+    }
+    .header-text p {
+        font-size: 13px;
+        color: var(--accent2);
+        font-style: italic;
+    }
+
+    .container {
+        max-width: 640px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        padding: 28px;
+        box-shadow: 0 4px 24px rgba(139,105,20,0.08);
+    }
+
+    .card h2 {
+        font-family: 'Playfair Display', serif;
+        color: var(--accent);
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+    }
+    .card p {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+        line-height: 1.6;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+    #rut-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        font-size: 15px;
+        font-family: 'DM Sans', sans-serif;
+        background: var(--surface2);
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    #rut-input:focus { border-color: #c9a84c; background: white; }
+    #rut-buscar {
+        padding: 12px 22px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    #rut-buscar:hover { background: var(--accent2); }
+
+    #rut-error {
+        color: var(--red);
+        font-size: 13px;
+        display: none;
+        margin-top: 6px;
+    }
+
+    #loading {
+        text-align: center;
+        padding: 30px;
+        color: var(--text-muted);
+        display: none;
+    }
+    .spinner {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--accent-light);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #resultados { margin-top: 24px; }
+
+    .estudiante-header {
+        background: var(--accent);
+        color: white;
+        border-radius: 12px 12px 0 0;
+        padding: 18px 20px;
+        margin-bottom: 0;
+    }
+    .estudiante-nombre {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+    }
+    .estudiante-curso {
+        font-size: 13px;
+        opacity: 0.85;
+        margin-top: 3px;
+    }
+
+    .resumen-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: none;
+        padding: 20px;
+    }
+    .resumen-titulo {
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+    .notas-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .nota-item {
+        border-radius: 10px;
+        padding: 10px 14px;
+        min-width: 130px;
+        border: 1px solid transparent;
+    }
+    .nota-fecha { font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+    .nota-titulo { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .nota-valor { font-size: 1.5rem; font-weight: 700; }
+
+    .detalle-ev {
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+        margin-top: 16px;
+    }
+    .detalle-titulo {
+        font-weight: 600;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+    .indicadores-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .indicador-item {
+        flex: 1;
+        min-width: 140px;
+        background: var(--surface2);
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+    .ind-nombre { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; }
+    .ind-barra-cont { display: flex; align-items: center; gap: 8px; }
+    .ind-barra-bg { flex: 1; background: var(--border); border-radius: 4px; height: 6px; }
+    .ind-barra { height: 6px; border-radius: 4px; }
+    .ind-score { font-size: 12px; font-weight: 600; }
+
+    .nota-final-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .nota-final-label { font-size: 13px; color: var(--text-muted); }
+    .nota-final-val { font-size: 1.4rem; font-weight: 700; }
+    .puntaje-val { font-size: 12px; color: var(--text-muted); }
+
+    .obs-box {
+        background: var(--accent-light);
+        border-left: 3px solid #c9a84c;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: #5a4a2f;
+        margin-top: 8px;
+    }
+    .obs-label { font-weight: 600; margin-bottom: 4px; }
+
+    .grafico-section {
+        border-top: 1px solid var(--border);
+        padding: 16px 0 0 0;
+        margin-top: 16px;
+    }
+    .grafico-titulo {
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+
+    .footer-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 12px 12px;
+        padding: 12px 20px;
+        font-size: 12px;
+        color: var(--text-muted);
+        text-align: right;
+        font-style: italic;
+    }
+
+    /* Asistente */
+    #asistente-btn {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        height: 44px;
+        padding: 0 18px;
+        border-radius: 22px;
+        background: var(--bg);
+        color: var(--accent);
+        border: 2px solid #c9a84c;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(139,105,20,0.2);
+        z-index: 1000;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    #asistente-btn:hover { background: #c9a84c; color: white; }
+
+    #asistente-panel {
+        position: fixed;
+        bottom: 80px;
+        right: 24px;
+        width: 320px;
+        max-height: 460px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        display: none;
+        flex-direction: column;
+        z-index: 1000;
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+    #asistente-panel.visible { display: flex; }
+    #asistente-header {
+        background: var(--accent);
+        color: white;
+        padding: 14px 16px;
+        font-family: 'Playfair Display', serif;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    #asistente-header span { flex: 1; }
+    #asistente-close { background: none; border: none; color: white; font-size: 18px; cursor: pointer; opacity: 0.8; }
+    #asistente-close:hover { opacity: 1; }
+    #asistente-mensajes {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: var(--surface2);
+    }
+    .msg-bot {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px 12px 12px 2px;
+        padding: 10px 13px;
+        font-size: 13px;
+        max-width: 90%;
+        line-height: 1.5;
+    }
+    .msg-user {
+        background: var(--accent);
+        color: white;
+        border-radius: 12px 12px 2px 12px;
+        padding: 10px 13px;
+        font-size: 13px;
+        max-width: 90%;
+        align-self: flex-end;
+        line-height: 1.5;
+    }
+    #asistente-input-area {
+        padding: 10px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        background: white;
+    }
+    #asistente-input {
+        flex: 1;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 8px 14px;
+        font-size: 13px;
+        font-family: 'DM Sans', sans-serif;
+        outline: none;
+    }
+    #asistente-input:focus { border-color: #c9a84c; }
+    #asistente-enviar {
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        cursor: pointer;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div class="clef">𝄞</div>
+    <div class="header-text">
+        <h1>Portal de Apoderados</h1>
+        <p>Educación Musical — Profesor Edison Olguín</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>Consulta de Notas</h2>
+        <p>Ingresa el RUT de tu estudiante para ver sus evaluaciones, puntajes y observaciones del profesor.</p>
+        <div class="search-row">
+            <input type="text" id="rut-input" placeholder="Ej: 12345678-9">
+            <button id="rut-buscar">Buscar</button>
+        </div>
+        <p id="rut-error">RUT no encontrado. Verifica el número ingresado.</p>
+    </div>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Cargando información...</p>
+    </div>
+
+    <div id="resultados"></div>
+</div>
+
+<!-- Asistente -->
+<button id="asistente-btn">❓ ¿Necesitas ayuda?</button>
+<div id="asistente-panel">
+    <div id="asistente-header">
+        <span>🎵 Asistente de Ayuda</span>
+        <button id="asistente-close">✕</button>
+    </div>
+    <div id="asistente-mensajes">
+        <div class="msg-bot">¡Hola! Soy el asistente del Portal de Apoderados. ¿En qué puedo ayudarte?</div>
+    </div>
+    <div id="asistente-input-area">
+        <input type="text" id="asistente-input" placeholder="Escribe tu pregunta...">
+        <button id="asistente-enviar">➤</button>
+    </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwR6l4TcBt4vG_FBKwYe_PV9bnYiVRztgaOOE478cl-r8EdFXTp9ZJI-fGKONxOuXQE4Q/exec';
+
+const ORIGINAL_ALL_STUDENTS_DATA = {"4A":["YARITZA ANDREA CARVAJAL FIGUEROA|25655724-K","ESTEFFANO SEBASTIEN CORREA ACEVEDO|28538336-6","YEAN IGNACIO DAZAROLA FERNÁNDEZ|24771387-5","MAXIMILIANO JOAQUÍN ESCOBAR LEIVA|25406090-9","BENJAMÍN IGNACIO FERNÁNDEZ BÓRQUEZ|25359460-8","ITZANAYA LUNA FIGUEROA CONTRERAS|25512232-0","NICOLÁS IGNACIO GATICA HERNÁNDEZ|25423214-9","YASIEL AUSTIN GODOY PAVON|100858067-3","MATHIAS IGNACIO HERRERA MARCHANT|24661594-2","VICENTE FRANCISCO MARTÍNEZ CORREA|25342220-3","MATEO ALONSO MELAR VINNETT|25431274-6","BRIAN SANTIAGO MENDEZ ALFONZO|100563049-1","AIDAN BALTAZAR MUÑOZ RIVERA|25667431-9","SARAI VALERIA PINTO GUERRERO|100787036-8","LUCKAS IGNACIO POBLETE FUENTES|25690757-7","SEBASTIAN JESUS POLANCO SANCHEZ|100601720-3","JULIETTE JENAYCE REMACHE MALDONADO|28507241-7","VICENTE THOMAS ROJAS CASTRO|25556761-6","LUCIANO SALVADOR ROMERO GARCÍA|25247612-1","FACUNDO EMILIO VALDIVIA NÚÑEZ|25638958-4","MATIAS ALONSO VÁSQUEZ CONTRERAS|25267220-6","EIMY ARLENE VERA OLIVOS|25576768-2","SOFFÍA ZAMORA ORELLANA|25707906-6"],"4B":["KIARA IGNACIA ALARCÓN AGUILLÓN|25209426-1","DENCEL OWEN ALDANA CASTRO|25429429-2","CRISTIAN DANIEL BARBOZA NERY|100563056-4","AMARU FERNANDO ESCANILLA ARRIAGADA|25691508-1","LEANDRO HERNÁN ESCANILLA MÁNQUEZ|25365130-K","RAINER BASTIÁN HUERTA OLIVA|25603242-2","ANASTASIA NICOL ISLA CASTRO|25510111-0","IVANNA FLORENCIA JORQUERA JARA|25550530-0","BENJAMÍN IGNACIO LARA ROMO|25583088-0","GABRIEL ANDRÉS MENESES ROJAS|25468819-3","ARJENIS SANTIAGO MONROY LIZCANO|100705675-K","SARI MILENA MURILLO MURILLO|25313810-6","ANTHONY ESAY OYARZO NIETO|25211328-2","MARTÍN IGNACIO POBLETE FUENTES|25690804-2","SERGIO ANDRÉS RAMÍREZ PACHECO|25626364-5","ALICE MONSERRAT RUIZ BUGUEÑO|25616918-5","CLAUDIA ISABEL SOLANO MONTILLA|100728054-4","LIAM ANTUÁ SOTO QUIJÓN|25618483-4","SANTIAGO ANDRÉS TELLO CANTERO|25178411-6","SIMÓN ANDRÉS TORRES ABARZA|25480884-9","MAXIMILIANO ANTONIO VALERO FLORES|25349415-8","ERIK BASTIÁN VALLADARES RUIZ|25454302-0"],"5A":["JESÚS ALFREDO ÁLVAREZ DÍAZ|24653243-5","LIAM CALEB BRAVO GARCIA|25299481-5","ILAN DE JESUS CADENAS PEÑA|100709241-1","BRUNO ALEJANDRO CAMPOS CABEZAS|25331974-7","GUSTAVO ANTONIO CASTRO HERRERA|25001662-K","ABDIEL IGNACIO ESTEFANIS CONTRERAS|24799458-0","ARIADNA AMBAR GARRIDO BASCUR|100830681-4","SOFÍA BELÉN GERALDO TEJEDA|25181967-K","SOLARA MARTINA GONZALEZ|100812452-K","MARDOCHEE GUIRAND|100759472-7","BASTIÁN FELIPE LABBÉ MATURANA|25138488-6","ZOHET ALEJANDRA MARIN GONZALEZ|26866326-6","SOFÍA VALENTINA MARTINEZ LÓPEZ|28536698-4","KAI MALÚ NÚÑEZ ZAMORA|25008063-8","JOAQUÍN IGNACIO OLIVARES PONCE DE LEÓN|25132898-6","MICAELA ALESSANDRA PAZ CASTRO|27177356-0","BIANCA NOEMÍ RODRÍGUEZ VARGAS|25032112-0","CASSANDRA FERNANDA CECILIA ROJO VILLEGAS|25215188-5","MONSERRAT BELÉN ROSAS RODRÍGUEZ|25337054-8","CONSTANZA VALENTINA URETA ALMUNA|24521172-4","ISABELLA PASCALE VALLEJOS CONTRERAS|25032445-6","AMARO GABRIEL VINNETT LÓPEZ|25003992-1"],"5B":["LAKKA MARINA VIOLETA ÁLVAREZ DÍAZ|25228775-2","AARÓN EXCEQUIEL ARANCIBIA ESPINOZA|25241489-4","DENI YAFEYDII ARANGO OLMEDO|100669545-7","DENNISE ALONDRA ARAYA AGUILERA|25017178-1","ALEXANDER RUBÉN BADILLO GÁLVEZ|25031420-5","FABIAN ALEJANDRO BALLESTE MEDINA|100412498-3","ELIZABETH DANIELA BARBOZA NERY|100562998-1","ABRAHAM SAMUEL GAMEZ CARABALLO|100602100-6","NADIENKA ALDENIRA DEL CARMEN GONZÁLEZ BASTIDAS|24336444-2","ERICK ABEL GRATEROL MENDOZA|100727047-6","ADDELEIN GUERRERO AREVALO|100853927-4","SOPHIA VALENTINA LAGUADO ROJAS|100596360-1","JEREMIAS JESUS LOPEZ GOMEZ|100422100-8","MAITE IGNACIA MONDACA HERRERA|25285834-2","JOSEPH WILLIAMS MUÑOZ ISAMIT|24990503-8","IGNACIO ALEXANDER MUÑOZ OLIVARES|25230066-K","ANTONELLA LISETTE NÚÑEZ GONZÁLEZ|25339787-K","LOURDES ISABELLA PORTUGAL SAUCEDO|100625945-2","IKER AGUSTIN RIESTRA HINOJOSA|24690119-8","CRISTÓBAL LAUTARO ROJAS ROJAS|25188682-2","MISAEL ANTONIO SÁNCHEZ NÚÑEZ|25141713-K","EXIEL DIMITRINOVISH SILVA BARRA|25208322-7","MARÍA PAZ TAPIA NAVARRO|25245256-7","BRIANA NAOMI TEJADA RUARTE|100782900-7"],"6A":["JIRO ANDREY ARIAS MALES|100371223-7","JUAN PABLO BERRÍOS MARTÍNEZ|23982900-7","DANAE AYLEN CARRIZO CEPEDA|24356139-6","VALESKA ESTEFANIA CASTILLO NAVAS|100562149-2","ISAAC MAXIMILIANO CERDA QUINTEROS|24810932-7","YAIZA LISBET CISTERNAS MEDINA|24880665-6","SOFÍA ANAÍS ESCOBAR VARGAS|24701605-8","JOHAN ALEJANDRO ESPINOZA MONSALVE|24046953-7","IAN HAZIEL FIORILO ANTEZANA|24669060-K","DAMIAN GONZALO GONZALEZ|100812444-9","FACUNDO SANTINO GONZÁLEZ SÁEZ|24589332-9","VICTORIA AYELÉN GUTIÉRREZ SIER|24790968-0","KARLA JOHANA LAGUADO VANEGAS|27798879-8","GABRIEL ANTONIO MANCILLA MINDER|24711709-1","KEVIN IGNACIO MORENO TORRES|24145009-0","GUSTAVO NICANOR PEDREROS HUERTA|24463715-9","CAMILA ALEJANDRA PINTO GUERRERO|100787076-7","ALFREDO JUAN JOSÉ RIOSECO NAVARRETE|24533827-9","JOSEPTH ANTONIO ROA ALLIENDE|24862711-5","GABRIEL ISRAEL ROJAS OLGUÍN|24613212-7","IGNACIO AGUSTÍN SILVA SARMIENTO|24246519-9","JOAQUIN JOSUA TEJADA PAVON|100498428-1","LEÓN AYUN URETA ULLOA|24684434-8","AGUSTÍN EXEQUIEL VICENCIO GONZÁLEZ|23637580-3","AGUSTINA IGNACIA VIDAL RAMÍREZ|24718993-9"],"6B":["TOMÁS IGNACIO ÁGUILA FIGUEROA|24541026-3","HAYLEY DESIRÉE ARDILES SALINAS|24631173-0","JORGE ELIAS CORTEZ GIMENEZ|28096896-K","JOAQUÍN TOMÁS DE RODT OJEDA|24933939-3","AGUSTÍN ANTONIO DÍAZ MARTÍNEZ|24605620-K","SEBASTIÁN EMILIO GONZÁLEZ CARREÑO|24682446-0","LEONOR DE JESÚS GUICHARD ROJAS|24801798-8","FELIPE IGNACIO GUZMÁN NOVOA|24608664-8","DECLAN ROBERT BRENDAN HILLIARD ORTIZ|24838345-3","ELTHON STHEFANO MAVILA FLORES|28773333-K","MARTÍN ALONSO MONSÁLVEZ ARRIAGADA|24900075-2","SAINY LISBETH MORALES BURGA|100830951-1","VICTORIA CONSTANZA ORTEGA TORRES|24826523-K","NICOLÁS ESTEBAN PANUSSIS RIVERA|24812044-4","CHRISTIAN ALONSO PAREDES VEGA|24828326-2","MARIANO BALTASAR RAMÍREZ JIMÉNEZ|24689778-6","DELAY JHASARELI REMACHE MALDONADO|28507276-K","PABLO IGNACIO ROJAS DONOSO|24425042-4","EDGAR ARÓN SALINAS NÚÑEZ|24573274-0","RICARDO ALFONSO SALVATIERRA SALAZAR|24840590-2","GABRIELA ANDREA SANTANDER CORNEJO|24794699-3","FACUNDO AGUSTÍN TELLO GODOY|24452907-0","ANTONELLA LUDMILA TUCUNA PINILLA|24445656-1","CARLOS DANIEL VALDEBENITO ARAYA|24015922-8","MATEO ALONSO VÁSQUEZ GONZÁLEZ|24635704-8","ANALÍA MONSERRAT VILCHES ANABALÓN|24709135-1","YASBLEIDY NICOL ZEPEDA NAVARRO|24572111-0"],"7A":["AGUSTÍN SANTOS ARAYA ZÚÑIGA|24246035-9","ELIAS DANIEL CONCHA FERREIRA|24222706-9","MAXIMO ALEJANDRO FORNARI|100600999-5","ANTONELLA PÁZ GAETE VINNETT|24295281-2","JOAQUÍN ELÍAS NICOLÁS GALLEGUILLOS GALLEGUILLOS|24610972-9","LUCAS AGUSTÍN GONZÁLEZ LEIVA|23925157-9","WALESKA SOFIA KAHEL LOPEZ|100763907-0","TOMÁS JACOB LAZÓN VILLALOBOS|24484931-8","SOFIA ELEONORA LORETO GAVIDIA|100383064-7","ABRAHAM LUIS MUÑOZ ISAMIT|24569455-5","JUAN PABLO NÚÑEZ GONZÁLEZ|23932891-1","SAMANTHA VALENTINA PIÑEIRO GIMENEZ|28006034-8","VICENTE TOMÁS RETAMALES PÉREZ|24259540-8","MOISÉS ISRAEL ROSAS RODRÍGUEZ|23995127-9","JAZMÍN VALENTINA UGALDE SAAVEDRA|26241305-5","EMILIA ANTONIA URIBE ORELLANA|24316410-9","LEONARDO ANTUAN VÉLIZ CANALES|24436651-1","MARÍA JESÚS VENEGAS ROJAS|24119235-0","ROLANDO ALEXIS VERGARA CRUZ|24338172-K","ORLANNYS NAIBETH YEPEZ RODRIGUEZ|28786328-4"],"7B":["AGUSTINA JAVIERA ARGANDOÑA ARAYA|24348895-8","AMPARO KHURU BASTÍAS OLAZABAL|24197738-2","BRUNO AMARO CABRERA HERRERA|24376188-3","JUAN AGUSTÍN CALDERON GUERRA|24375823-8","MATEO AGUSTÍN CÓRDOVA OYARZÚN|23930823-6","LUIZARIT JOSEFINA ESCALONA JIMENEZ|27857202-1","CAMILA BELÉN ESTAY HERNÁNDEZ|24341979-4","JESUS GABRIEL GARCIA DURAN|100448799-7","CESAR BENJAMIN GARRIDO BASCUR|100830684-9","AGUSTÍN IGNACIO SALOMÓN GUZMÁN CABRERA|24586690-9","BENJAMÍN PATRICIO GUZMÁN CALDERÓN|23665831-7","JHONNY LIONEL JAIMES CORREA|28451216-2","CIRO RODRIGO LÓPEZ VARGAS|24654875-7","AXEL BENJAMÍN MOYA ESCOBAR|23817422-8","DAYVSON ALPHONSO OLIVARES TAPIA|24396663-9","SOFÍA ANTONELA PÉREZ RODRÍGUEZ|24375101-2","VICTORIA ALEJANDRA PIÑA GARCIA|26009013-5","FELIPE ANTONIO RETAMALES PÉREZ|24259566-1","JOAQUIN IGNACIO RIQUELME SEARES|24017930-K","ESTHER KEREN HA PUC RUIZ CALDERON|26050695-1","PARIS STHEFANIA TORRES GÓMEZ|24046743-7","EITHAN ANDRÉ VIVANCO FERNÁNDEZ|24505576-5"],"8A":["DYLAN JACOB APABLAZA FLORES|24131054-K","MIGUELANGEL GABRIEL BRICEÑO VENEGAS|100677520-5","FLAVIA RAFAELLA CONTRERAS CASTRO|24655524-9","NAOMÍ AMARAL COSTELA QUIJÓN|23959595-2","JASMINE DEL CARMEN ECHEVERRÍA FABRES|23790986-0","ANTONIA IGNACIA FERNANDEZ VEGA|23384559-0","NIKOL AMANDA FERNÁNDEZ TAPIA|24194294-5","ECAR ARIEL HERRERA GALLARDO|23878687-8","XAVIER ALEXANDER MARIN GONZALEZ|26866358-4","ISRAEL ADRIAN MONROY RAMIREZ|100841926-0","MARTÍN IGNACIO NOVOA RODRÍGUEZ|23938492-7","JEREMÍAS ELIER ORTEGA TORRES|23827380-3","ANTONELLA DAVIANA PARRA CHOURIO|27973073-9","BENJAMÍN JOAN PASTÉN DELGADO|23832517-K","GABRIEL EDUARDO PINTO GUERRERO|100787081-3","RENATO ALONSO ROJAS HERNÁNDEZ|23701820-6","JUAN IGNACIO ROZAS GUZMÁN|24161571-5","ASHLY ANTONELLA RUIZ GODOY|23886050-4","IGNACIA CAROLINA SALDAÑO PULGAR|24197124-4","JULIETA EMILIA SAN JUAN BARRERA|24230309-1","AGUSTINA ISIDORA TRINIDAD SAN MARTÍN GATICA|24059164-2","HERTZCICH ALEXANDRA SILVA PATIÑO|100648822-2","NATALIA ISABEL TORRES CHARRIS|28498465-K","ARIEL ALEJANDRO VENEGAS CRUZ|23502472-1","RAFAEL HERNÁN ZEPEDA NAVARRO|23888525-6"],"8B":["EMILIO ACEITUNO GOLDSCHMIDT|23907484-7","NICOLÁS ANDRÉS ACEVEDO GALÁN|23122610-9","FELIPE ANDRÉS ARAVENA CASTILLO|24112277-8","JULIO SEBASTIAN BARRIOS SANTIAGO|100798221-2","RUDIGER SINEDYNE BELLENGER BRACCHITTA|24110997-6","BRITTANY NICOLE CORTÉS VILLALOBOS|24025564-2","KIMBERLY DANAE ESTEFANIS CONTRERAS|24045578-1","TAYLOR STHEPHANNYE ANTONIA FASSI ARRIAGADA|23808525-K","ESTEBAN JAVIER GAMEZ CARABALLO|100602096-4","KELVIN JOHAN GOMEZ RAMOS|100705642-3","VALERY FERNANDA GOMEZ TORREALBA|28646084-4","ANTONELLA BELÉN GRANDÓN VARGAS|24280196-2","JESCARLY NAZARETH JIMENEZ SANCHEZ|100800525-3","SOFÍA BELÉN JORQUERA JARA|24039543-6","EMILIA CONSTANZA MARTÍNEZ COFRÉ|24244168-0","AGUSTIN IGNACIO MARTÍNEZ OLIVARES|24122966-1","OLIVER DAVID MEDRANO MONTILLA|100728048-K","YORDI GOODFREY MENDOZA PLAZA|23794306-6","ANAÍS STEPHANIA OYARZÚN ORELLANA|24165121-5","MONSERRAT FERNÁNDA PÉREZ GALLARDO|24153906-7","JOSEFA IGNACIA PINTO CABRERA|23933315-K","ESTEBAN IGNACIO RODRÍGUEZ ORTIZ|24064503-3","JOSÉ LUIS ROJAS CASTRO|23941919-4","VIOLETT ANASTASIA RUIZ BUGUEÑO|24188725-1","ANTONELLA MARIANA TAPIA GONZÁLEZ|24158375-9","HILARY JULIETH TORRES RAMIREZ|27194995-2"]};
+
+const rutInput = document.getElementById('rut-input');
+const rutBuscar = document.getElementById('rut-buscar');
+const rutError = document.getElementById('rut-error');
+const loading = document.getElementById('loading');
+const resultados = document.getElementById('resultados');
+
+rutInput.addEventListener('input', () => {
+    rutInput.value = rutInput.value.replace(/[^0-9kK\-]/g, '').toUpperCase();
+});
+rutInput.addEventListener('keydown', e => { if (e.key === 'Enter') buscar(); });
+rutBuscar.addEventListener('click', buscar);
+
+async function buscar() {
+    const rut = rutInput.value.trim().toUpperCase();
+    if (!rut) return;
+    rutError.style.display = 'none';
+    resultados.innerHTML = '';
+
+    // Buscar estudiante por RUT
+    let foundName = null, foundCourse = null;
+    for (const courseKey in ORIGINAL_ALL_STUDENTS_DATA) {
+        for (const entry of ORIGINAL_ALL_STUDENTS_DATA[courseKey]) {
+            const parts = entry.split('|');
+            if (parts[1] && parts[1].trim().toUpperCase() === rut) {
+                foundName = parts[0].trim();
+                foundCourse = courseKey;
+                break;
+            }
+        }
+        if (foundName) break;
+    }
+
+    if (!foundName) {
+        rutError.style.display = 'block';
+        return;
+    }
+
+    // Mostrar loading
+    loading.style.display = 'block';
+
+    try {
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`, { redirect: 'follow' });
+        const text = await res.text();
+        const data = JSON.parse(text);
+        loading.style.display = 'none';
+
+        if (!data.ok || !Array.isArray(data.data)) {
+            resultados.innerHTML = '<div style="text-align:center;padding:30px;color:#8a7d6b;">No se pudo cargar la información. Intenta más tarde.</div>';
+            return;
+        }
+
+        mostrarResultados(foundName, foundCourse, data.data);
+    } catch (err) {
+        loading.style.display = 'none';
+        resultados.innerHTML = '<div style="text-align:center;padding:30px;color:#c0392b;">Error al conectar. Verifica tu conexión.</div>';
+    }
+}
+
+function mostrarResultados(nombre, curso, evaluaciones) {
+    const evsConEstudiante = evaluaciones.map(ev => {
+        const result = ev.results ? ev.results.find(r => r.name && r.name.toUpperCase() === nombre.toUpperCase()) : null;
+        return { ev, result };
+    }).filter(x => x.result && x.result.status !== 'A');
+
+    if (evsConEstudiante.length === 0) {
+        resultados.innerHTML = `<div class="card" style="margin-top:16px;text-align:center;padding:30px;color:var(--text-muted);">
+            <div style="font-size:2rem;margin-bottom:8px;">📋</div>
+            <p>Aún no hay evaluaciones registradas para <b>${nombre}</b>.</p>
+        </div>`;
+        return;
+    }
+
+    let html = `<div style="margin-top:16px;">
+        <div class="estudiante-header">
+            <div class="estudiante-nombre">🎵 ${nombre}</div>
+            <div class="estudiante-curso">${curso} · Educación Musical</div>
+        </div>
+        <div class="resumen-card">
+            <div class="resumen-titulo">📊 Resumen de Evaluaciones</div>
+            <div class="notas-grid">`;
+
+    evsConEstudiante.forEach(({ev, result}) => {
+        const nota = parseFloat(result.finalGrade);
+        const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
+        const color = esSI ? '#8a7d6b' : nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+        const bg = esSI ? '#f5f3ee' : nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
+        html += `<div class="nota-item" style="background:${bg};border-color:${color}30;">
+            <div class="nota-fecha">${new Date(ev.date).toLocaleDateString('es-CL')}</div>
+            <div class="nota-titulo">${ev.title}</div>
+            <div class="nota-valor" style="color:${color};">${esSI ? 'S/I' : result.finalGrade}</div>
+        </div>`;
+    });
+
+    html += `</div>`;
+
+    // Detalle por evaluación
+    evsConEstudiante.forEach(({ev, result}) => {
+        const indicadores = (ev.indicators || []).filter(i => i !== 'Puntaje' && i !== 'Nota' && i !== 'Observación');
+        const nota = parseFloat(result.finalGrade);
+        const color = nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+
+        html += `<div class="detalle-ev">
+            <div class="detalle-titulo">${ev.title} <span style="font-size:12px;color:var(--text-muted);">· ${new Date(ev.date).toLocaleDateString('es-CL')}</span></div>`;
+
+        if (indicadores.length > 0) {
+            html += `<div class="indicadores-grid">`;
+            indicadores.forEach(ind => {
+                const sc = result.scores && result.scores[ind] !== null && result.scores[ind] !== undefined ? result.scores[ind] : '—';
+                const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                const pct = sc !== '—' ? (sc/max)*100 : 0;
+                const barColor = pct >= 75 ? '#2d7d4f' : pct >= 50 ? '#b8891e' : '#c0392b';
+                html += `<div class="indicador-item">
+                    <div class="ind-nombre">${ind}</div>
+                    <div class="ind-barra-cont">
+                        <div class="ind-barra-bg"><div class="ind-barra" style="width:${pct}%;background:${barColor};"></div></div>
+                        <span class="ind-score" style="color:${barColor};">${sc}/${max}</span>
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        html += `<div class="nota-final-row">
+            <span class="nota-final-label">Nota final:</span>
+            <span class="nota-final-val" style="color:${color};">${result.finalGrade}</span>
+            <span class="puntaje-val">· ${result.status}</span>
+        </div>`;
+
+        if (result.comment && result.comment.trim()) {
+            html += `<div class="obs-box">
+                <div class="obs-label">💬 Observación del profesor:</div>
+                ${result.comment}
+            </div>`;
+        }
+        html += `</div>`;
+    });
+
+    // Gráfico
+    const evsConNota = evsConEstudiante.filter(({result}) => result.finalGrade !== 'S/I' && result.finalGrade !== 'A');
+    if (evsConNota.length > 1) {
+        const chartId = 'chart-' + Date.now();
+        html += `<div class="grafico-section">
+            <div class="grafico-titulo">📈 Progreso</div>
+            <canvas id="${chartId}" height="160"></canvas>
+        </div>`;
+        setTimeout(() => {
+            const ctx = document.getElementById(chartId);
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: evsConNota.map(({ev}) => ev.title),
+                    datasets: [{
+                        data: evsConNota.map(({result}) => parseFloat(result.finalGrade)),
+                        borderColor: '#8b6914',
+                        backgroundColor: 'rgba(139,105,20,0.1)',
+                        pointBackgroundColor: evsConNota.map(({result}) => {
+                            const n = parseFloat(result.finalGrade);
+                            return n >= 6 ? '#2d7d4f' : n >= 4 ? '#b8891e' : '#c0392b';
+                        }),
+                        pointRadius: 6,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { min: 1, max: 7, ticks: { stepSize: 1 }, grid: { color: '#e0d9ce' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }, 100);
+    }
+
+    html += `</div>`;
+    html += `<div class="footer-card">Generado automáticamente · Educación Musical LBO</div>`;
+    html += `</div>`;
+    resultados.innerHTML = html;
+}
+
+// Asistente
+const asistBtn = document.getElementById('asistente-btn');
+const asistPanel = document.getElementById('asistente-panel');
+const asistClose = document.getElementById('asistente-close');
+const asistMensajes = document.getElementById('asistente-mensajes');
+const asistInput = document.getElementById('asistente-input');
+const asistEnviar = document.getElementById('asistente-enviar');
+const historial = [];
+
+asistBtn.addEventListener('click', () => asistPanel.classList.toggle('visible'));
+asistClose.addEventListener('click', () => asistPanel.classList.remove('visible'));
+asistInput.addEventListener('keydown', e => { if (e.key === 'Enter') enviarMensaje(); });
+asistEnviar.addEventListener('click', enviarMensaje);
+
+function agregarMsg(texto, tipo) {
+    const div = document.createElement('div');
+    div.className = tipo;
+    div.textContent = texto;
+    asistMensajes.appendChild(div);
+    asistMensajes.scrollTop = asistMensajes.scrollHeight;
+    return div;
+}
+
+async function enviarMensaje() {
+    const texto = asistInput.value.trim();
+    if (!texto) return;
+    asistInput.value = '';
+    agregarMsg(texto, 'msg-user');
+    historial.push({ role: 'user', content: texto });
+    const escribiendo = agregarMsg('Escribiendo...', 'msg-bot');
+    try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-20250514',
+                max_tokens: 500,
+                system: 'Eres un asistente amable del Portal de Apoderados de Educación Musical del Profesor Edison Olguín. Respondes SIEMPRE en español de forma breve y clara. Ayudas a los apoderados a consultar las notas de sus hijos usando su RUT (formato 12345678-9). Si no puedes responder algo, sugiere contactar al profesor.',
+                messages: historial
+            })
+        });
+        const data = await res.json();
+        const respuesta = data.content && data.content[0] ? data.content[0].text : 'Lo siento, intenta de nuevo.';
+        escribiendo.remove();
+        agregarMsg(respuesta, 'msg-bot');
+        historial.push({ role: 'assistant', content: respuesta });
+    } catch {
+        escribiendo.remove();
+        agregarMsg('Error al conectar. Intenta de nuevo.', 'msg-bot');
+    }
+}
+</script>
+</body>
+</html>
