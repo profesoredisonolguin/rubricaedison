@@ -2029,15 +2029,27 @@ document.addEventListener('DOMContentLoaded', () => {
                             const data = await fileRes.json();
                             if (data && Array.isArray(data)) {
                                 const existing = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-                                const existingIds = new Set(existing.map(e => e.id));
-                                const newEntries = data.filter(e => !existingIds.has(e.id));
-                                if (newEntries.length > 0) {
-                                    const merged = [...existing, ...newEntries];
-                                    localStorage.setItem('allEvaluations', JSON.stringify(merged));
-                                    displaySavedEvaluations();
-                                    driveSetStatus(`✅ Conectado. Se cargaron ${newEntries.length} evaluación(es) desde Drive.`, '#28a745');
-                                    return;
-                                }
+                                // Combinar: usar datos de Drive pero preservar campos locales nuevos
+                                const merged = data.map(driveEv => {
+                                    const localEv = existing.find(e => e.id === driveEv.id);
+                                    if (localEv) {
+                                        // Preservar campos que solo existen localmente
+                                        return {
+                                            ...driveEv,
+                                            comentarioGeneral: localEv.comentarioGeneral || driveEv.comentarioGeneral || '',
+                                            _docId: localEv._docId || driveEv._docId
+                                        };
+                                    }
+                                    return driveEv;
+                                });
+                                // Agregar evaluaciones locales que no están en Drive
+                                const driveIds = new Set(data.map(e => e.id));
+                                const soloLocales = existing.filter(e => !driveIds.has(e.id));
+                                const final = [...merged, ...soloLocales];
+                                localStorage.setItem('allEvaluations', JSON.stringify(final));
+                                displaySavedEvaluations();
+                                driveSetStatus(`✅ Conectado a Drive.`, '#28a745');
+                                return;
                             }
                         }
                     }
