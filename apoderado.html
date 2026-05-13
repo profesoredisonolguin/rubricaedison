@@ -468,7 +468,12 @@ async function buscar() {
     try {
         const res = await fetch(`${APPS_SCRIPT_URL}?action=getEvaluaciones&curso=${foundCourse}`, { redirect: 'follow' });
         const text = await res.text();
-        const data = JSON.parse(text);
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch(e) {
+            throw new Error('Respuesta inválida del servidor');
+        }
         loading.style.display = 'none';
 
         if (!data.ok || !Array.isArray(data.data)) {
