@@ -487,8 +487,7 @@ function mostrarResultados(nombre, curso, evaluaciones) {
     const evsConEstudiante = evaluaciones.map(ev => {
         const result = ev.results ? ev.results.find(r => r.name && r.name.toUpperCase() === nombre.toUpperCase()) : null;
         return { ev, result };
-    }).filter(x => x.result && x.result.status !== 'A');
-
+    }).filter(x => x.result);
     if (evsConEstudiante.length === 0) {
         resultados.innerHTML = `<div class="card" style="margin-top:16px;text-align:center;padding:30px;color:var(--text-muted);">
             <div style="font-size:2rem;margin-bottom:8px;">📋</div>
@@ -507,14 +506,15 @@ function mostrarResultados(nombre, curso, evaluaciones) {
             <div class="notas-grid">`;
 
     evsConEstudiante.forEach(({ev, result}) => {
+        const esAusente = result.status === 'A' || result.finalGrade === 'A';
         const nota = parseFloat(result.finalGrade);
         const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
-        const color = esSI ? '#8a7d6b' : nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
-        const bg = esSI ? '#f5f3ee' : nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
+        const color = esAusente ? '#8a7d6b' : esSI ? '#8a7d6b' : nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+        const bg = esAusente ? '#f0eeeb' : esSI ? '#f5f3ee' : nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
         html += `<div class="nota-item" style="background:${bg};border-color:${color}30;">
             <div class="nota-fecha">${new Date(ev.date).toLocaleDateString('es-CL')}</div>
             <div class="nota-titulo">${ev.title}</div>
-            <div class="nota-valor" style="color:${color};">${esSI ? 'S/I' : result.finalGrade}</div>
+            <div class="nota-valor" style="color:${color};">${esAusente ? '📋 Ausente' : esSI ? 'S/I' : result.finalGrade}</div>
         </div>`;
     });
 
@@ -522,6 +522,8 @@ function mostrarResultados(nombre, curso, evaluaciones) {
 
     // Detalle por evaluación
     evsConEstudiante.forEach(({ev, result}) => {
+        const esAusente = result.status === 'A' || result.finalGrade === 'A';
+        const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
         const indicadores = (ev.indicators || []).filter(i => i !== 'Puntaje' && i !== 'Nota' && i !== 'Observación');
         const nota = parseFloat(result.finalGrade);
         const color = nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
@@ -529,34 +531,52 @@ function mostrarResultados(nombre, curso, evaluaciones) {
         html += `<div class="detalle-ev">
             <div class="detalle-titulo">${ev.title} <span style="font-size:12px;color:var(--text-muted);">· ${new Date(ev.date).toLocaleDateString('es-CL')}</span></div>`;
 
-        if (indicadores.length > 0) {
-            html += `<div class="indicadores-grid">`;
-            indicadores.forEach(ind => {
-                const sc = result.scores && result.scores[ind] !== null && result.scores[ind] !== undefined ? result.scores[ind] : '—';
-                const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
-                const pct = sc !== '—' ? (sc/max)*100 : 0;
-                const barColor = pct >= 75 ? '#2d7d4f' : pct >= 50 ? '#b8891e' : '#c0392b';
-                html += `<div class="indicador-item">
-                    <div class="ind-nombre">${ind}</div>
-                    <div class="ind-barra-cont">
-                        <div class="ind-barra-bg"><div class="ind-barra" style="width:${pct}%;background:${barColor};"></div></div>
-                        <span class="ind-score" style="color:${barColor};">${sc}/${max}</span>
-                    </div>
-                </div>`;
-            });
-            html += `</div>`;
+        if (ev.comentarioGeneral && ev.comentarioGeneral.trim()) {
+            html += `<div style="background:#e6f4f4; border-left:3px solid #0d7377; border-radius:0 8px 8px 0; padding:10px 14px; font-size:13px; color:#0d5c60; margin-bottom:10px;">
+                <span style="font-weight:600;">📢 Mensaje del profesor:</span><br>${ev.comentarioGeneral}
+            </div>`;
         }
 
-        html += `<div class="nota-final-row">
-            <span class="nota-final-label">Nota final:</span>
-            <span class="nota-final-val" style="color:${color};">${result.finalGrade}</span>
-            <span class="puntaje-val">· ${result.status}</span>
-        </div>`;
+        if (esAusente) {
+            html += `<div style="background:#f0eeeb; border-radius:8px; padding:12px 14px; color:#8a7d6b; font-size:13px;">
+                📋 El estudiante estuvo <b>ausente</b> en esta evaluación. Debe coordinar con el profesor la fecha de recuperación.
+            </div>`;
+        } else if (esSI) {
+            html += `<div style="background:#fef9ec; border-radius:8px; padding:12px 14px; color:#b8891e; font-size:13px;">
+                ⏳ Evaluación <b>pendiente</b> — el estudiante no alcanzó a rendir esta evaluación. Debe coordinar con el profesor.
+            </div>`;
+        } else {
+            if (indicadores.length > 0) {
+                html += `<div class="indicadores-grid">`;
+                indicadores.forEach(ind => {
+                    const sc = result.scores && result.scores[ind] !== null && result.scores[ind] !== undefined ? result.scores[ind] : '—';
+                    const max = ev.indicatorMaxScores ? ev.indicatorMaxScores[ind] : 4;
+                    const pct = sc !== '—' ? (sc/max)*100 : 0;
+                    const barColor = pct >= 75 ? '#2d7d4f' : pct >= 50 ? '#b8891e' : '#c0392b';
+                    html += `<div class="indicador-item">
+                        <div class="ind-nombre">${ind}</div>
+                        <div class="ind-barra-cont">
+                            <div class="ind-barra-bg"><div class="ind-barra" style="width:${pct}%;background:${barColor};"></div></div>
+                            <span class="ind-score" style="color:${barColor};">${sc}/${max}</span>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
 
-        if (result.comment && result.comment.trim()) {
-            html += `<div class="obs-box">
-                <div class="obs-label">💬 Observación del profesor:</div>
-                ${result.comment}
+            html += `<div class="nota-final-row">
+                <span class="nota-final-label">Nota final:</span>
+                <span class="nota-final-val" style="color:${color};">${result.finalGrade}</span>
+                <span class="puntaje-val">· ${result.status}</span>
+            </div>`;
+
+            if (result.comment && result.comment.trim()) {
+                html += `<div class="obs-box">
+                    <div class="obs-label">💬 Observación del profesor:</div>
+                    ${result.comment}
+                </div>`;
+            }
+        }
             </div>`;
         }
         html += `</div>`;
