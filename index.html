@@ -2048,26 +2048,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             const data = await fileRes.json();
                             if (data && Array.isArray(data)) {
                                 const existing = JSON.parse(localStorage.getItem('allEvaluations')) || [];
-                                // Combinar: usar datos de Drive pero preservar campos locales nuevos
-                                const merged = data.map(driveEv => {
-                                    const localEv = existing.find(e => e.id === driveEv.id);
-                                    if (localEv) {
-                                        // Preservar campos que solo existen localmente
-                                        return {
-                                            ...driveEv,
-                                            comentarioGeneral: localEv.comentarioGeneral || driveEv.comentarioGeneral || '',
-                                            _docId: localEv._docId || driveEv._docId
-                                        };
-                                    }
-                                    return driveEv;
-                                });
-                                // Agregar evaluaciones locales que no están en Drive
-                                const driveIds = new Set(data.map(e => e.id));
-                                const soloLocales = existing.filter(e => !driveIds.has(e.id));
-                                const final = [...merged, ...soloLocales];
-                                localStorage.setItem('allEvaluations', JSON.stringify(final));
-                                displaySavedEvaluations();
-                                driveSetStatus(`✅ Conectado a Drive.`, '#28a745');
+                                // El localStorage tiene prioridad — solo agregar desde Drive lo que no existe localmente
+                                const existingIds = new Set(existing.map(e => e.id));
+                                const existingKeys = new Set(existing.map(e => `${e.title}||${e.course}`));
+                                const soloEnDrive = data.filter(driveEv => 
+                                    !existingIds.has(driveEv.id) && !existingKeys.has(`${driveEv.title}||${driveEv.course}`)
+                                );
+                                const final = [...existing, ...soloEnDrive];
+                                if (soloEnDrive.length > 0) {
+                                    localStorage.setItem('allEvaluations', JSON.stringify(final));
+                                    displaySavedEvaluations();
+                                    driveSetStatus(`✅ Conectado. Se cargaron ${soloEnDrive.length} evaluación(es) adicional(es) desde Drive.`, '#28a745');
+                                } else {
+                                    driveSetStatus('✅ Conectado a Drive.', '#28a745');
+                                }
                                 return;
                             }
                         }
