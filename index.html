@@ -1427,14 +1427,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 100);
 
-        setTimeout(() => {
+        function restaurarPuntajes(intentos) {
             const studentRows = document.querySelectorAll('.compact-rubric-table tbody tr');
+            if (studentRows.length === 0 && intentos > 0) {
+                setTimeout(() => restaurarPuntajes(intentos - 1), 300);
+                return;
+            }
+            let restoredCount = 0;
             studentRows.forEach(row => {
                 const studentName = row.cells[1].textContent;
                 const studentData = evaluationToLoad.results.find(r => r.name === studentName);
                 if (studentData) {
                     if (studentData.status === 'A') {
-                        row.querySelector('.absent-checkbox').click();
+                        const checkbox = row.querySelector('.absent-checkbox');
+                        if (checkbox && !checkbox.checked) checkbox.click();
                     } else {
                         for (const indicatorName in studentData.scores) {
                             const score = studentData.scores[indicatorName];
@@ -1445,6 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     if (scoreButton) {
                                         cell.querySelectorAll('.score-button').forEach(b => b.classList.remove('selected'));
                                         scoreButton.classList.add('selected');
+                                        restoredCount++;
                                     }
                                 }
                             }
@@ -1455,8 +1462,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
-            debouncedSaveWithDrive();
-        }, 400);
+            // Si no se restauró nada y quedan intentos, reintentar
+            if (restoredCount === 0 && intentos > 0) {
+                setTimeout(() => restaurarPuntajes(intentos - 1), 400);
+            } else {
+                debouncedSaveWithDrive();
+            }
+        }
+
+        setTimeout(() => restaurarPuntajes(5), 400);
     }
 
     function populateHistoryFilters() {
