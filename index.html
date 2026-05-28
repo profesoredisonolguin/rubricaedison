@@ -1083,9 +1083,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const importedData = JSON.parse(event.target.result);
                 if (!Array.isArray(importedData)) throw new Error('El archivo no tiene el formato correcto.');
                 const existing = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+                // Eliminar del localStorage cualquier evaluación con mismo título+curso que viene en el JSON
+                const importedKeys = new Set(importedData.map(e => `${e.title}||${e.course}`));
                 const importedIds = new Set(importedData.map(e => e.id));
-                const sinReemplazar = existing.filter(e => !importedIds.has(e.id));
-                const merged = [...sinReemplazar, ...importedData];
+                const sinDuplicados = existing.filter(e => 
+                    !importedIds.has(e.id) && !importedKeys.has(`${e.title}||${e.course}`)
+                );
+                const merged = [...sinDuplicados, ...importedData];
                 localStorage.setItem('allEvaluations', JSON.stringify(merged));
                 displaySavedEvaluations();
                 alert(`Importación exitosa. Se cargaron ${importedData.length} evaluación(es).`);
@@ -1990,6 +1994,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function activarModoProfesor() {
         document.body.classList.remove('modo-apoderado');
+        displaySavedEvaluations();
     }
 
     function driveSetStatus(msg, color = '#888') {
