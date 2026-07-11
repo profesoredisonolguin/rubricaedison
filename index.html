@@ -258,6 +258,7 @@
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="container">
@@ -343,6 +344,34 @@
                 <label for="evaluation-title" style="font-weight: bold;">Título de la Evaluación:</label>
                 <input type="text" id="evaluation-title" placeholder="Ej: Unidad 2 - Canto Grupal" style="width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px;">
             </div>
+            <div style="display:flex; gap:16px; margin-bottom:15px; flex-wrap:wrap;">
+                <div>
+                    <label style="font-weight:bold; font-size:14px;">Tipo de Evaluación:</label>
+                    <div style="display:flex; gap:10px; margin-top:6px;">
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
+                            <input type="radio" name="eval-tipo" id="tipo-sumativa" value="sumativa" checked>
+                            <span style="background:#e8f5ee; color:#2d7d4f; padding:4px 12px; border-radius:20px; font-weight:600;">Sumativa</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
+                            <input type="radio" name="eval-tipo" id="tipo-formativa" value="formativa">
+                            <span style="background:#e6f4f4; color:#0d7377; padding:4px 12px; border-radius:20px; font-weight:600;">Formativa</span>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-weight:bold; font-size:14px;">Semestre:</label>
+                    <div style="display:flex; gap:10px; margin-top:6px;">
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
+                            <input type="radio" name="eval-semestre" id="semestre-1" value="1" checked>
+                            <span style="background:#f5e9cc; color:#8b6914; padding:4px 12px; border-radius:20px; font-weight:600;">1° Semestre</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
+                            <input type="radio" name="eval-semestre" id="semestre-2" value="2">
+                            <span style="background:#f5e9cc; color:#8b6914; padding:4px 12px; border-radius:20px; font-weight:600;">2° Semestre</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             <div class="course-selection-container">
                 <div>
                     <label for="course-select">Curso:</label>
@@ -378,6 +407,9 @@
             <button id="export-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 5px; margin-right: 10px;">⬇ Exportar datos (.json)</button>
             <label for="import-input" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #6c757d; color: white; border: none; border-radius: 5px; display: inline-block;">⬆ Importar datos (.json)</label>
             <input type="file" id="import-input" accept=".json" style="display: none;">
+            <hr style="margin: 15px 0; border-color: #ddd;">
+            <button id="excel-evaluacion-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #1d6f42; color: white; border: none; border-radius: 5px; margin-right: 10px;">📊 Excel — Esta Evaluación</button>
+            <button id="excel-curso-button" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #1d6f42; color: white; border: none; border-radius: 5px;">📊 Excel — Todas las Evaluaciones del Curso</button>
 
         </div>
 
@@ -515,6 +547,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: evaluationTitle,
             course: `${courseSelect.value.replace('°', '')}${letterSelect.value}`,
             date: new Date().toISOString(),
+            tipo: document.querySelector('input[name="eval-tipo"]:checked')?.value || 'sumativa',
+            semestre: document.querySelector('input[name="eval-semestre"]:checked')?.value || '1',
             indicators: [],
             indicatorMaxScores: {},
             comentarioGeneral: document.getElementById('comentario-general') ? document.getElementById('comentario-general').value.trim() : '',
@@ -1414,6 +1448,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         evaluationTitleInput.value = evaluationToLoad.title;
+        // Restaurar tipo y semestre
+        const tipoVal = evaluationToLoad.tipo || 'sumativa';
+        const semestreVal = evaluationToLoad.semestre || '1';
+        const tipoRadio = document.querySelector(`input[name="eval-tipo"][value="${tipoVal}"]`);
+        if (tipoRadio) tipoRadio.checked = true;
+        const semRadio = document.querySelector(`input[name="eval-semestre"][value="${semestreVal}"]`);
+        if (semRadio) semRadio.checked = true;
         const courseMatch = evaluationToLoad.course.match(/^(\d+)([A-Z])$/);
         if (courseMatch) {
             courseSelect.value = `${courseMatch[1]}°`;
@@ -2626,6 +2667,95 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.warn('No se pudo registrar consulta:', err);
         }
+    }
+
+    // Exportar Excel — evaluación actual
+    document.getElementById('excel-evaluacion-button').addEventListener('click', () => {
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const cursoCode = `${courseSelect.value.replace('°','')}${letterSelect.value}`;
+        const titulo = evaluationTitleInput.value.trim();
+        if (!titulo) { alert('Primero genera o carga una evaluación.'); return; }
+        const ev = allEvaluations.find(e => e.title === titulo && e.course === cursoCode);
+        if (!ev) { alert('No se encontró la evaluación actual.'); return; }
+        exportarExcelEvaluacion(ev);
+    });
+
+    document.getElementById('excel-curso-button').addEventListener('click', () => {
+        const allEvaluations = JSON.parse(localStorage.getItem('allEvaluations')) || [];
+        const cursoCode = `${courseSelect.value.replace('°','')}${letterSelect.value}`;
+        const evsDeCurso = allEvaluations.filter(e => e.course === cursoCode);
+        if (evsDeCurso.length === 0) { alert('No hay evaluaciones guardadas para este curso.'); return; }
+        exportarExcelCurso(evsDeCurso, cursoCode);
+    });
+
+    function exportarExcelEvaluacion(ev) {
+        const wb = XLSX.utils.book_new();
+        const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
+        const sem = ev.semestre ? `${ev.semestre}° Semestre` : '';
+        const rows = [
+            [`${ev.title} — ${ev.course} — ${tipo} ${sem}`],
+            ['N°', 'Nombre', 'Nota']
+        ];
+        ev.results.forEach((r, i) => {
+            const nota = r.status === 'A' ? 'Ausente' : r.finalGrade === 'S/I' ? 'S/I' : r.finalGrade || '-';
+            rows.push([i+1, r.name, nota]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 4 }, { wch: 35 }, { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, ev.title.substring(0, 31));
+        XLSX.writeFile(wb, `${ev.title} - ${ev.course}.xlsx`);
+    }
+
+    function exportarExcelCurso(evs, cursoCode) {
+        const wb = XLSX.utils.book_new();
+        const estudiantes = [...new Set(evs.flatMap(ev => ev.results.map(r => r.name)))].sort();
+        const headers = ['Nombre', ...evs.map(ev => `${ev.title}${ev.tipo === 'formativa' ? ' (F)' : ''}`), 'Promedio'];
+        const rows = [headers];
+        estudiantes.forEach(nombre => {
+            const notas = evs.map(ev => {
+                const r = ev.results.find(r => r.name === nombre);
+                if (!r) return '-';
+                if (r.status === 'A') return 'Ausente';
+                if (r.finalGrade === 'S/I') return 'S/I';
+                return r.finalGrade || '-';
+            });
+            const sumativas = evs.filter(ev => (ev.tipo || 'sumativa') === 'sumativa');
+            const formativas1 = evs.filter(ev => ev.tipo === 'formativa' && (ev.semestre || '1') === '1');
+            const formativas2 = evs.filter(ev => ev.tipo === 'formativa' && ev.semestre === '2');
+            const getNotaEst = (ev) => {
+                const r = ev.results.find(r => r.name === nombre);
+                if (!r || ['A','S/I',null,undefined,''].includes(r.finalGrade)) return null;
+                return parseFloat(r.finalGrade);
+            };
+            const notasSumativas = sumativas.map(getNotaEst).filter(n => n !== null);
+            const pf1 = formativas1.map(getNotaEst).filter(n => n !== null);
+            const pf2 = formativas2.map(getNotaEst).filter(n => n !== null);
+            const todasNotas = [...notasSumativas];
+            if (pf1.length > 0) todasNotas.push(pf1.reduce((a,b) => a+b,0)/pf1.length);
+            if (pf2.length > 0) todasNotas.push(pf2.reduce((a,b) => a+b,0)/pf2.length);
+            const promedio = todasNotas.length > 0 ? (todasNotas.reduce((a,b) => a+b,0)/todasNotas.length).toFixed(1) : '-';
+            rows.push([nombre, ...notas, promedio]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 35 }, ...evs.map(() => ({ wch: 14 })), { wch: 10 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
+        evs.forEach(ev => {
+            const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
+            const hRows = [
+                [`${ev.title} — ${ev.course} — ${tipo}`],
+                ['N°', 'Nombre', 'Nota']
+            ];
+            ev.results.forEach((r, i) => {
+                const nota = r.status === 'A' ? 'Ausente' : r.finalGrade === 'S/I' ? 'S/I' : r.finalGrade || '-';
+                hRows.push([i+1, r.name, nota]);
+            });
+            const hws = XLSX.utils.aoa_to_sheet(hRows);
+            hws['!cols'] = [{ wch: 4 }, { wch: 35 }, { wch: 10 }];
+            const sheetName = (ev.title + (ev.tipo === 'formativa' ? '(F)' : '')).substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, hws, sheetName);
+        });
+        const cursoNombre = getCursoNombre(cursoCode).replace('_',' ');
+        XLSX.writeFile(wb, `Evaluaciones - ${cursoNombre}.xlsx`);
     }
 
     displaySavedEvaluations();
