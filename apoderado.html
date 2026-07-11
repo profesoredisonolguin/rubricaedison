@@ -494,6 +494,7 @@ function mostrarResultados(nombre, curso, evaluaciones) {
         const result = ev.results ? ev.results.find(r => r.name && r.name.toUpperCase() === nombre.toUpperCase()) : null;
         return { ev, result };
     }).filter(x => x.result);
+
     if (evsConEstudiante.length === 0) {
         resultados.innerHTML = `<div class="card" style="margin-top:16px;text-align:center;padding:30px;color:var(--text-muted);">
             <div style="font-size:2rem;margin-bottom:8px;">📋<\/div>
@@ -502,27 +503,106 @@ function mostrarResultados(nombre, curso, evaluaciones) {
         return;
     }
 
+    // Separar por tipo
+    const sumativas = evsConEstudiante.filter(x => (x.ev.tipo || 'sumativa') === 'sumativa');
+    const formativas1 = evsConEstudiante.filter(x => x.ev.tipo === 'formativa' && (x.ev.semestre || '1') === '1');
+    const formativas2 = evsConEstudiante.filter(x => x.ev.tipo === 'formativa' && x.ev.semestre === '2');
+
+    // Calcular promedio de formativas con nota válida
+    function promedioFormativas(fms) {
+        const conNota = fms.filter(x => !['A','S/I',null,undefined].includes(x.result.finalGrade));
+        if (conNota.length === 0) return null;
+        return conNota.reduce((s, x) => s + parseFloat(x.result.finalGrade), 0) / conNota.length;
+    }
+
+    // Calcular promedio general
+    function calcularPromedioGeneral() {
+        const notasSumativas = sumativas
+            .filter(x => !['A','S/I',null,undefined].includes(x.result.finalGrade))
+            .map(x => parseFloat(x.result.finalGrade));
+        const prom1 = promedioFormativas(formativas1);
+        const prom2 = promedioFormativas(formativas2);
+        const todasLasNotas = [...notasSumativas];
+        if (prom1 !== null) todasLasNotas.push(prom1);
+        if (prom2 !== null) todasLasNotas.push(prom2);
+        if (todasLasNotas.length === 0) return null;
+        return todasLasNotas.reduce((s, n) => s + n, 0) / todasLasNotas.length;
+    }
+
+    function notaColor(nota) {
+        return nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
+    }
+    function notaBg(nota) {
+        return nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
+    }
+
+    function tarjetaNota(ev, result, badge) {
+        const esAusente = result.status === 'A' || result.finalGrade === 'A';
+        const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
+        const nota = parseFloat(result.finalGrade);
+        const color = esAusente ? '#8a7d6b' : esSI ? '#8a7d6b' : notaColor(nota);
+        const bg = esAusente ? '#f0eeeb' : esSI ? '#f5f3ee' : notaBg(nota);
+        return `<div class="nota-item" style="background:${bg};border-color:${color}30;">
+            ${badge ? `<div style="font-size:10px;font-weight:700;color:${color};margin-bottom:2px;">${badge}<\/div>` : ''}
+            <div class="nota-fecha">${new Date(ev.date).toLocaleDateString('es-CL')}<\/div>
+            <div class="nota-titulo">${ev.title}<\/div>
+            <div class="nota-valor" style="color:${color};">${esAusente ? '📋 Ausente' : esSI ? 'S/I' : result.finalGrade}<\/div>
+        <\/div>`;
+    }
+
+    function tarjetaPromedio(label, promedio, color) {
+        return `<div class="nota-item" style="background:${notaBg(promedio)};border:2px solid ${color};border-radius:10px;padding:10px 14px;min-width:130px;">
+            <div style="font-size:11px;font-weight:700;color:${color};margin-bottom:2px;">${label}<\/div>
+            <div class="nota-titulo">Promedio<\/div>
+            <div class="nota-valor" style="color:${notaColor(promedio)};">${promedio.toFixed(1)}<\/div>
+        <\/div>`;
+    }
+
     let html = `<div style="margin-top:16px;">
         <div class="estudiante-header">
             <div class="estudiante-nombre">🎵 ${nombre}<\/div>
             <div class="estudiante-curso">${curso} · Educación Musical<\/div>
         <\/div>
-        <div class="resumen-card">
-            <div class="resumen-titulo">📊 Resumen de Evaluaciones<\/div>
-            <div class="notas-grid">`;
+        <div class="resumen-card">`;
 
-    evsConEstudiante.forEach(({ev, result}) => {
-        const esAusente = result.status === 'A' || result.finalGrade === 'A';
-        const nota = parseFloat(result.finalGrade);
-        const esSI = result.finalGrade === 'S/I' || result.status === 'S/I';
-        const color = esAusente ? '#8a7d6b' : esSI ? '#8a7d6b' : nota >= 6 ? '#2d7d4f' : nota >= 4 ? '#b8891e' : '#c0392b';
-        const bg = esAusente ? '#f0eeeb' : esSI ? '#f5f3ee' : nota >= 6 ? '#e8f5ee' : nota >= 4 ? '#fef9ec' : '#fdecea';
-        html += `<div class="nota-item" style="background:${bg};border-color:${color}30;">
-            <div class="nota-fecha">${new Date(ev.date).toLocaleDateString('es-CL')}<\/div>
-            <div class="nota-titulo">${ev.title}<\/div>
-            <div class="nota-valor" style="color:${color};">${esAusente ? '📋 Ausente' : esSI ? 'S/I' : result.finalGrade}<\/div>
+    // Promedio general
+    const promGeneral = calcularPromedioGeneral();
+    if (promGeneral !== null) {
+        html += `<div style="text-align:center;padding:14px 0 10px;">
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">Promedio General</div>
+            <div style="font-size:2.2rem;font-weight:700;color:${notaColor(promGeneral)};">${promGeneral.toFixed(1)}<\/div>
         <\/div>`;
-    });
+    }
+
+    // Sumativas
+    if (sumativas.length > 0) {
+        html += `<div class="resumen-titulo" style="margin-top:12px;">📝 Evaluaciones Sumativas<\/div>
+            <div class="notas-grid">`;
+        sumativas.forEach(({ev, result}) => { html += tarjetaNota(ev, result, 'SUMATIVA'); });
+        html += `<\/div>`;
+    }
+
+    // Formativas 1° semestre
+    if (formativas1.length > 0) {
+        const prom1 = promedioFormativas(formativas1);
+        html += `<div class="resumen-titulo" style="margin-top:12px;">📋 Evaluaciones Formativas — 1° Semestre<\/div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Las formativas se promedian entre sí y ese promedio cuenta como una nota sumativa.<\/div>
+            <div class="notas-grid">`;
+        formativas1.forEach(({ev, result}) => { html += tarjetaNota(ev, result, 'FORMATIVA'); });
+        if (prom1 !== null) html += tarjetaPromedio('PROMEDIO FORMATIVAS 1°SEM', prom1, '#0d7377');
+        html += `<\/div>`;
+    }
+
+    // Formativas 2° semestre
+    if (formativas2.length > 0) {
+        const prom2 = promedioFormativas(formativas2);
+        html += `<div class="resumen-titulo" style="margin-top:12px;">📋 Evaluaciones Formativas — 2° Semestre<\/div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Las formativas se promedian entre sí y ese promedio cuenta como una nota sumativa.<\/div>
+            <div class="notas-grid">`;
+        formativas2.forEach(({ev, result}) => { html += tarjetaNota(ev, result, 'FORMATIVA'); });
+        if (prom2 !== null) html += tarjetaPromedio('PROMEDIO FORMATIVAS 2°SEM', prom2, '#0d7377');
+        html += `<\/div>`;
+    }
 
     html += `<\/div>`;
 
@@ -587,9 +667,19 @@ function mostrarResultados(nombre, curso, evaluaciones) {
         html += `</div>`;
     });
 
-    // Gráfico
-    const evsConNota = evsConEstudiante.filter(({result}) => result.finalGrade !== 'S/I' && result.finalGrade !== 'A');
-    if (evsConNota.length > 1) {
+    // Gráfico — sumativas + promedio formativas por semestre
+    const puntosGrafico = [];
+    if (formativas1.length > 0 && promedioFormativas(formativas1) !== null) {
+        puntosGrafico.push({ label: 'Form. 1°Sem', nota: promedioFormativas(formativas1), formativa: true });
+    }
+    if (formativas2.length > 0 && promedioFormativas(formativas2) !== null) {
+        puntosGrafico.push({ label: 'Form. 2°Sem', nota: promedioFormativas(formativas2), formativa: true });
+    }
+    sumativas.filter(x => !['A','S/I',null,undefined].includes(x.result.finalGrade)).forEach(({ev, result}) => {
+        puntosGrafico.push({ label: ev.title, nota: parseFloat(result.finalGrade), formativa: false });
+    });
+
+    if (puntosGrafico.length > 1) {
         const chartId = 'chart-' + Date.now();
         html += `<div class="grafico-section">
             <div class="grafico-titulo">📈 Progreso<\/div>
@@ -601,14 +691,14 @@ function mostrarResultados(nombre, curso, evaluaciones) {
             new Chart(ctx.getContext('2d'), {
                 type: 'line',
                 data: {
-                    labels: evsConNota.map(({ev}) => ev.title),
+                    labels: puntosGrafico.map(p => p.label),
                     datasets: [{
-                        data: evsConNota.map(({result}) => parseFloat(result.finalGrade)),
+                        data: puntosGrafico.map(p => p.nota),
                         borderColor: '#8b6914',
                         backgroundColor: 'rgba(139,105,20,0.1)',
-                        pointBackgroundColor: evsConNota.map(({result}) => {
-                            const n = parseFloat(result.finalGrade);
-                            return n >= 6 ? '#2d7d4f' : n >= 4 ? '#b8891e' : '#c0392b';
+                        pointBackgroundColor: puntosGrafico.map(p => {
+                            if (p.formativa) return '#0d7377';
+                            return p.nota >= 6 ? '#2d7d4f' : p.nota >= 4 ? '#b8891e' : '#c0392b';
                         }),
                         pointRadius: 6,
                         tension: 0.3,
