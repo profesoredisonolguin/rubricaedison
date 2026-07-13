@@ -2688,30 +2688,62 @@ document.addEventListener('DOMContentLoaded', () => {
         exportarExcelCurso(evsDeCurso, cursoCode);
     });
 
+    function parsearNombre(nombreCompleto) {
+        // Formato: "NOMBRES APELLIDO_PAT APELLIDO_MAT" — intentar separar
+        const partes = nombreCompleto.trim().split(' ');
+        if (partes.length >= 3) {
+            const apPat = partes[partes.length - 2];
+            const apMat = partes[partes.length - 1];
+            const nombres = partes.slice(0, partes.length - 2).join(' ');
+            return { nombres, apPat, apMat };
+        } else if (partes.length === 2) {
+            return { nombres: partes[0], apPat: partes[1], apMat: '' };
+        }
+        return { nombres: nombreCompleto, apPat: '', apMat: '' };
+    }
+
+    function getRutEstudiante(nombre, curso) {
+        const studentData = JSON.parse(localStorage.getItem('customStudentData')) || ORIGINAL_ALL_STUDENTS_DATA;
+        const lista = studentData[curso] || [];
+        for (const entry of lista) {
+            const parts = entry.split('|');
+            if (parts[0].trim().toUpperCase() === nombre.toUpperCase()) {
+                return parts[1] ? parts[1].trim() : '';
+            }
+        }
+        return '';
+    }
+
     function exportarExcelEvaluacion(ev) {
         const wb = XLSX.utils.book_new();
         const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
         const sem = ev.semestre ? `${ev.semestre}° Semestre` : '';
+        // Fila de título con info de evaluación
         const rows = [
-            [`${ev.title} — ${ev.course} — ${tipo} ${sem}`],
-            ['N°', 'Nombre', 'Nota']
+            [`${ev.title} — ${ev.course} — ${tipo} ${sem}`, '', '', '', ''],
+            ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', 'Nota']
         ];
-        ev.results.forEach((r, i) => {
+        ev.results.forEach(r => {
+            const rut = getRutEstudiante(r.name, ev.course);
+            const { nombres, apPat, apMat } = parsearNombre(r.name);
             const nota = r.status === 'A' ? 'Ausente' : r.finalGrade === 'S/I' ? 'S/I' : r.finalGrade || '-';
-            rows.push([i+1, r.name, nota]);
+            rows.push([rut, apPat, apMat, nombres, nota]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols'] = [{ wch: 4 }, { wch: 35 }, { wch: 10 }];
+        ws['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 8 }];
         XLSX.utils.book_append_sheet(wb, ws, ev.title.substring(0, 31));
         XLSX.writeFile(wb, `${ev.title} - ${ev.course}.xlsx`);
     }
 
     function exportarExcelCurso(evs, cursoCode) {
         const wb = XLSX.utils.book_new();
+        // Hoja resumen
         const estudiantes = [...new Set(evs.flatMap(ev => ev.results.map(r => r.name)))].sort();
-        const headers = ['Nombre', ...evs.map(ev => `${ev.title}${ev.tipo === 'formativa' ? ' (F)' : ''}`), 'Promedio'];
+        const headers = ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', ...evs.map(ev => `${ev.title}${ev.tipo === 'formativa' ? ' (F)' : ''}`), 'Promedio'];
         const rows = [headers];
         estudiantes.forEach(nombre => {
+            const rut = getRutEstudiante(nombre, cursoCode);
+            const { nombres, apPat, apMat } = parsearNombre(nombre);
             const notas = evs.map(ev => {
                 const r = ev.results.find(r => r.name === nombre);
                 if (!r) return '-';
@@ -2734,23 +2766,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (pf1.length > 0) todasNotas.push(pf1.reduce((a,b) => a+b,0)/pf1.length);
             if (pf2.length > 0) todasNotas.push(pf2.reduce((a,b) => a+b,0)/pf2.length);
             const promedio = todasNotas.length > 0 ? (todasNotas.reduce((a,b) => a+b,0)/todasNotas.length).toFixed(1) : '-';
-            rows.push([nombre, ...notas, promedio]);
+            rows.push([rut, apPat, apMat, nombres, ...notas, promedio]);
         });
         const ws = XLSX.utils.aoa_to_sheet(rows);
-        ws['!cols'] = [{ wch: 35 }, ...evs.map(() => ({ wch: 14 })), { wch: 10 }];
+        ws['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, ...evs.map(() => ({ wch: 14 })), { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
+        // Una hoja por evaluación
         evs.forEach(ev => {
             const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
             const hRows = [
-                [`${ev.title} — ${ev.course} — ${tipo}`],
-                ['N°', 'Nombre', 'Nota']
+                [`${ev.title} — ${ev.course} — ${tipo}`, '', '', '', ''],
+                ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', 'Nota']
             ];
-            ev.results.forEach((r, i) => {
+            ev.results.forEach(r => {
+                const rut = getRutEstudiante(r.name, ev.course);
+                const { nombres, apPat, apMat } = parsearNombre(r.name);
                 const nota = r.status === 'A' ? 'Ausente' : r.finalGrade === 'S/I' ? 'S/I' : r.finalGrade || '-';
-                hRows.push([i+1, r.name, nota]);
+                hRows.push([rut, apPat, apMat, nombres, nota]);
             });
             const hws = XLSX.utils.aoa_to_sheet(hRows);
-            hws['!cols'] = [{ wch: 4 }, { wch: 35 }, { wch: 10 }];
+            hws['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 8 }];
             const sheetName = (ev.title + (ev.tipo === 'formativa' ? '(F)' : '')).substring(0, 31);
             XLSX.utils.book_append_sheet(wb, hws, sheetName);
         });
