@@ -2716,13 +2716,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function exportarExcelEvaluacion(ev) {
         const wb = XLSX.utils.book_new();
-        const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
-        const sem = ev.semestre ? `${ev.semestre}° Semestre` : '';
-        // Fila de título con info de evaluación
-        const rows = [
-            [`${ev.title} — ${ev.course} — ${tipo} ${sem}`, '', '', '', ''],
-            ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', 'Nota']
-        ];
+        const rows = [['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', '']];
         ev.results.forEach(r => {
             const rut = getRutEstudiante(r.name, ev.course);
             const { nombres, apPat, apMat } = parsearNombre(r.name);
@@ -2737,7 +2731,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function exportarExcelCurso(evs, cursoCode) {
         const wb = XLSX.utils.book_new();
-        // Hoja resumen
         const estudiantes = [...new Set(evs.flatMap(ev => ev.results.map(r => r.name)))].sort();
         const headers = ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', ...evs.map(ev => `${ev.title}${ev.tipo === 'formativa' ? ' (F)' : ''}`), 'Promedio'];
         const rows = [headers];
@@ -2771,13 +2764,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const ws = XLSX.utils.aoa_to_sheet(rows);
         ws['!cols'] = [{ wch: 14 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, ...evs.map(() => ({ wch: 14 })), { wch: 10 }];
         XLSX.utils.book_append_sheet(wb, ws, 'Resumen');
-        // Una hoja por evaluación
         evs.forEach(ev => {
-            const tipo = ev.tipo === 'formativa' ? 'Formativa' : 'Sumativa';
-            const hRows = [
-                [`${ev.title} — ${ev.course} — ${tipo}`, '', '', '', ''],
-                ['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', 'Nota']
-            ];
+            const hRows = [['RUN', 'Apellido paterno', 'Apellido materno', 'Nombres', '']];
             ev.results.forEach(r => {
                 const rut = getRutEstudiante(r.name, ev.course);
                 const { nombres, apPat, apMat } = parsearNombre(r.name);
